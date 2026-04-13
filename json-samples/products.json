@@ -1,0 +1,25 @@
+{
+  "store": {
+    "name": "Tech Store Thailand",
+    "location": "Bangkok",
+    "products": [
+      {
+        "id": 1,
+        "name": "Laptop Pro 15",
+        "price": 45000,
+        "currency": "THB",
+        "inStock": true,
+        "specs": { "cpu": "Intel Core i7", "ram": "16GB", "storage": "512GB SSD" }
+      },
+      {
+        "id": 2,
+        "name": "Wireless Mouse",
+        "price": 890,
+        "currency": "THB",
+        "inStock": true,
+        "specs": { "connectivity": "Bluetooth 5.0", "batteryLife": "12 months" }
+      }
+    ],
+    "totalItems": 2
+  }
+}

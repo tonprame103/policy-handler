@@ -1,0 +1,23 @@
+{
+  "users": [
+    {
+      "id": "usr_001",
+      "name": "สมชาย ใจดี",
+      "email": "somchai@example.com",
+      "role": "admin",
+      "active": true,
+      "createdAt": "2024-01-15T08:00:00Z",
+      "preferences": { "language": "th", "theme": "dark", "notifications": true }
+    },
+    {
+      "id": "usr_002",
+      "name": "วิภา รักชาติ",
+      "email": "vipa@example.com",
+      "role": "user",
+      "active": true,
+      "createdAt": "2024-03-22T12:30:00Z",
+      "preferences": { "language": "th", "theme": "light", "notifications": false }
+    }
+  ],
+  "meta": { "total": 2, "page": 1, "pageSize": 10 }
+}

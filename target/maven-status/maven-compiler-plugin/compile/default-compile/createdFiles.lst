@@ -1,0 +1,9 @@
+com\jsontool\JsonToolApplication.class
+com\jsontool\model\FileListResponse.class
+com\jsontool\controller\JsonController.class
+com\jsontool\model\JsonFileInfo.class
+com\jsontool\config\AppProperties.class
+com\jsontool\config\WebConfig.class
+com\jsontool\controller\GlobalExceptionHandler.class
+com\jsontool\model\ValidationResult.class
+com\jsontool\service\JsonService.class

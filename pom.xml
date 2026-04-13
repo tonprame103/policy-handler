@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║  JSON Tool — Spring Boot 4.0.5 + Java 21                        ║
+    ║  Java 25 upgrade path:                                           ║
+    ║    1. เปลี่ยน <java.version>21</java.version> → 25              ║
+    ║    2. mvn clean package                                          ║
+    ║  Spring Boot 4.0 รองรับ Java 17–25 (first-class Java 25)        ║
+    ╚══════════════════════════════════════════════════════════════════╝
+    -->
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.5</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.jsontool</groupId>
+    <artifactId>json-tool</artifactId>
+    <version>1.0.0</version>
+    <name>JSON Tool</name>
+    <description>JSON Validator and File Reader — Spring Boot 4.0 / Java 21 (Java 25 ready)</description>
+
+    <properties>
+        <!-- ─── Java version ───────────────────────────────────────────
+             เปลี่ยนค่านี้เป็น 25 เมื่อต้องการ upgrade ไป Java 25 LTS
+             Spring Boot 4.0 รองรับ Java 17, 21, 23, 24, 25
+        ──────────────────────────────────────────────────────────── -->
+        <java.version>25</java.version>
+
+        <!-- Maven Enforcer: ป้องกัน build ด้วย JDK ที่ต่ำกว่าที่กำหนด -->
+        <maven.enforcer.jdk.min>25</maven.enforcer.jdk.min>
+    </properties>
+
+    <dependencies>
+
+        <!-- ─── Web (Spring MVC + Tomcat) ─────────────────────────── -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+            <!--
+                NOTE: Spring Boot 4 แยก spring-boot-starter-web ออกเป็น
+                spring-boot-starter-webmvc (MVC) และ spring-boot-starter-webflux (Reactive)
+                ใช้ webmvc สำหรับ blocking/traditional REST API
+            -->
+        </dependency>
+
+        <!-- ─── Bean Validation (Jakarta EE 11) ────────────────────── -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- ─── Jackson (JSON processing) ──────────────────────────── -->
+        <!--
+            Spring Boot 4 มาพร้อม Jackson 3.x โดย default
+            Jackson 3.x มีการเปลี่ยน package: com.fasterxml.jackson → tools.jackson
+            แต่ spring-boot-starter-webmvc จัดการ compatibility layer ให้แล้ว
+        -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- ─── Virtual Threads (Project Loom) — ทำงานบน Java 21+  ── -->
+        <!--
+            เปิดใช้งานใน application.properties:
+            spring.threads.virtual.enabled=true
+            ทำให้ Tomcat และ task executors ใช้ virtual threads โดยอัตโนมัติ
+        -->
+
+        <!-- ─── Actuator (health, metrics, info) ───────────────────── -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- ─── DevTools (hot reload) ───────────────────────────────── -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ─── Test ────────────────────────────────────────────────── -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+
+            <!-- ─── Spring Boot Maven Plugin ──────────────────────── -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- ─── Maven Enforcer: ป้องกัน JDK เวอร์ชันต่ำกว่ากำหนด ─ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-java</id>
+                        <goals><goal>enforce</goal></goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[${maven.enforcer.jdk.min},)</version>
+                                    <message>ต้องใช้ Java ${maven.enforcer.jdk.min}+ เท่านั้น</message>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- ─── OpenRewrite: ช่วย migrate ไป Java 25 อัตโนมัติ ──── -->
+            <!--
+                วิธีใช้:
+                mvn rewrite:run -Drewrite.activeRecipes=org.openrewrite.java.migrate.UpgradeToJava25
+                แล้วตามด้วย:
+                mvn rewrite:run -Drewrite.activeRecipes=org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0
+
+                ปลดความคอมเมนต์ plugin นี้เมื่อต้องการ migrate:
+            -->
+            <!--
+            <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+                <version>5.45.0</version>
+                <configuration>
+                    <activeRecipes>
+                        <recipe>org.openrewrite.java.migrate.UpgradeToJava25</recipe>
+                    </activeRecipes>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-migrate-java</artifactId>
+                        <version>2.28.0</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            -->
+
+        </plugins>
+    </build>
+
+</project>

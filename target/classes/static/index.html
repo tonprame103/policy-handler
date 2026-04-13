@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Tool — Validator & Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --surface3: #232840;
+    --border: #2a3050;
+    --border2: #3a4470;
+    --accent: #4f8ef7;
+    --accent2: #7c4dff;
+    --green: #2dd4bf;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --text: #e2e8f8;
+    --muted: #6b7db3;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────────── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: white;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .header-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hbadge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--mono); font-size: 0.68rem; font-weight: 500;
+    padding: 0.2rem 0.6rem; border-radius: 4px;
+  }
+
+  .hbadge-green { background: rgba(45,212,191,0.12); color: var(--green); border: 1px solid rgba(45,212,191,0.25); }
+  .hbadge-blue  { background: rgba(79,142,247,0.12); color: var(--accent); border: 1px solid rgba(79,142,247,0.25); }
+  .hbadge-amber { background: rgba(251,191,36,0.12); color: var(--amber); border: 1px solid rgba(251,191,36,0.25); }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 5px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Tabs ────────────────────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0 2rem;
+  }
+
+  .tab {
+    padding: 0.85rem 1.5rem;
+    font-family: var(--mono); font-size: 0.78rem; font-weight: 500;
+    color: var(--muted); cursor: pointer;
+    border: none; border-bottom: 2px solid transparent;
+    background: none;
+    display: flex; align-items: center; gap: 8px;
+    transition: color 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Main ────────────────────────────────────────────────────────── */
+  .main { flex: 1; display: flex; padding: 1.5rem 2rem; gap: 1.5rem; }
+
+  .view { display: none; width: 100%; }
+  .view.active { display: flex; gap: 1.5rem; width: 100%; }
+
+  /* ── Panel ───────────────────────────────────────────────────────── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .panel-title {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
+    color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .panel-actions { display: flex; gap: 6px; }
+
+  /* ── Buttons ─────────────────────────────────────────────────────── */
+  .btn {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
+    padding: 0.28rem 0.75rem; border-radius: 5px;
+    cursor: pointer; border: 1px solid var(--border2);
+    background: transparent; color: var(--muted);
+    transition: all 0.15s; letter-spacing: 0.02em;
+  }
+  .btn:hover { color: var(--text); border-color: var(--accent); background: rgba(79,142,247,0.08); }
+
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .btn-primary:hover { background: #3b7af0; border-color: #3b7af0; color: white; }
+
+  .btn-danger { color: var(--red); }
+  .btn-danger:hover { border-color: var(--red); background: rgba(248,113,113,0.08); color: var(--red); }
+
+  /* ── Textarea ────────────────────────────────────────────────────── */
+  textarea {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-family: var(--mono); font-size: 0.82rem;
+    line-height: 1.7; padding: 1rem 1.25rem;
+    resize: none; min-height: 320px;
+  }
+  textarea::placeholder { color: var(--muted); }
+
+  /* ── Result box ──────────────────────────────────────────────────── */
+  .result-box {
+    flex: 1;
+    font-family: var(--mono); font-size: 0.82rem; line-height: 1.7;
+    padding: 1rem 1.25rem; white-space: pre-wrap;
+    overflow: auto; color: var(--text); min-height: 200px;
+  }
+
+  /* ── Status bar ──────────────────────────────────────────────────── */
+  .status-bar {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.45rem 1rem; border-top: 1px solid var(--border);
+    background: var(--surface2);
+    font-family: var(--mono); font-size: 0.72rem;
+  }
+
+  /* ── Badges ──────────────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 0.18rem 0.55rem; border-radius: 4px;
+    font-size: 0.68rem; font-weight: 500; font-family: var(--mono);
+  }
+  .badge-success { background: rgba(45,212,191,0.12); color: var(--green); border: 1px solid rgba(45,212,191,0.28); }
+  .badge-error   { background: rgba(248,113,113,0.12); color: var(--red);   border: 1px solid rgba(248,113,113,0.28); }
+  .badge-idle    { background: rgba(107,125,179,0.12); color: var(--muted); border: 1px solid rgba(107,125,179,0.28); }
+
+  /* ── JSON Syntax highlight ───────────────────────────────────────── */
+  .json-key    { color: #79b8ff; }
+  .json-string { color: #9ecbff; }
+  .json-number { color: #f0883e; }
+  .json-bool   { color: #ff7b72; }
+  .json-null   { color: #6e7681; }
+  .json-punct  { color: var(--muted); }
+
+  .error-text {
+    color: var(--red); background: rgba(248,113,113,0.06);
+    border-left: 3px solid var(--red);
+    padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; margin: 1rem;
+  }
+  .error-detail { color: var(--muted); font-size: 0.78rem; margin-top: 0.5rem; }
+
+  /* ── File grid ───────────────────────────────────────────────────── */
+  .file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .file-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1rem; cursor: pointer;
+    transition: all 0.15s; display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .file-card:hover { border-color: var(--accent); background: var(--surface3); transform: translateY(-1px); }
+
+  .file-card-header { display: flex; align-items: center; justify-content: space-between; }
+
+  .file-name {
+    font-family: var(--mono); font-size: 0.83rem; font-weight: 500;
+    color: var(--text); display: flex; align-items: center; gap: 8px;
+  }
+
+  .file-meta {
+    font-family: var(--mono); font-size: 0.68rem; color: var(--muted);
+    display: flex; gap: 1rem;
+  }
+
+  .file-preview {
+    font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+    background: var(--surface); padding: 0.4rem 0.65rem;
+    border-radius: 5px; border: 1px solid var(--border);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ── Folder bar ──────────────────────────────────────────────────── */
+  .folder-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0.6rem 1rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 1rem;
+    font-family: var(--mono); font-size: 0.76rem; color: var(--muted);
+  }
+  .folder-path { color: var(--accent); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Misc ────────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid var(--border2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 3rem; gap: 0.75rem;
+    color: var(--muted); font-family: var(--mono); font-size: 0.83rem; text-align: center;
+  }
+  .empty-icon { font-size: 2.5rem; opacity: 0.35; }
+
+  .back-btn {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+    cursor: pointer; background: none; border: none; padding: 0;
+    transition: color 0.15s;
+  }
+  .back-btn:hover { color: var(--accent); }
+
+  .copied-msg {
+    position: fixed; bottom: 2rem; right: 2rem;
+    background: var(--green); color: #0d0f14;
+    font-family: var(--mono); font-size: 0.76rem; font-weight: 600;
+    padding: 0.5rem 1rem; border-radius: 6px;
+    opacity: 0; transform: translateY(10px);
+    transition: all 0.2s; pointer-events: none;
+  }
+  .copied-msg.show { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 768px) {
+    .main { padding: 1rem; }
+    .view.active { flex-direction: column; }
+    .tabs, header { padding: 0 1rem; }
+    .hbadge-blue, .hbadge-amber { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">{}</div>
+    <div class="logo-text">JSON<span>Tool</span></div>
+  </div>
+  <div class="header-badges">
+    <span class="hbadge hbadge-blue">Spring Boot 4.0.5</span>
+    <span class="hbadge hbadge-amber">Java 21 → 25 ready</span>
+    <span class="hbadge hbadge-green"><div class="dot"></div>running</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('validate')" id="tab-validate">
+    ✓ Validate &amp; Format
+  </button>
+  <button class="tab" onclick="switchTab('files')" id="tab-files">
+    📁 JSON Files
+  </button>
+</div>
+
+<div class="main">
+
+  <!-- ── VALIDATE TAB ──────────────────────────────────────────────── -->
+  <div class="view active" id="view-validate">
+
+    <!-- Input panel -->
+    <div class="panel" style="flex:1; min-height:440px;">
+      <div class="panel-header">
+        <div class="panel-title">⌨ input.json</div>
+        <div class="panel-actions">
+          <button class="btn" onclick="loadSample()">Load Sample</button>
+          <button class="btn btn-danger" onclick="clearInput()">Clear</button>
+          <button class="btn btn-primary" onclick="validateJson()">▶ Validate</button>
+        </div>
+      </div>
+      <textarea id="jsonInput"
+        placeholder='Paste your JSON here...&#10;&#10;Tip: Ctrl+Enter เพื่อ validate'></textarea>
+      <div class="status-bar">
+        <span id="inputStatus" class="badge badge-idle">— idle</span>
+        <span id="charCount" style="color:var(--muted)">0 chars</span>
+      </div>
+    </div>
+
+    <!-- Output panel -->
+    <div class="panel" style="flex:1; min-height:440px;">
+      <div class="panel-header">
+        <div class="panel-title">⬡ output</div>
+        <div class="panel-actions">
+          <button class="btn" onclick="copyResult()" id="copyBtn" style="display:none">Copy</button>
+          <button class="btn" onclick="toggleMinify()" id="minifyBtn" style="display:none">Minify</button>
+        </div>
+      </div>
+      <div class="result-box" id="resultBox">
+        <div class="empty-state">
+          <div class="empty-icon">{}</div>
+          <div>Formatted JSON will appear here</div>
+          <div style="font-size:0.7rem;margin-top:.25rem">Paste JSON แล้วกด Validate</div>
+        </div>
+      </div>
+      <div class="status-bar">
+        <span id="resultStatus" class="badge badge-idle">awaiting input</span>
+        <span id="lineCount" style="color:var(--muted)"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── FILES TAB ─────────────────────────────────────────────────── -->
+  <div class="view" id="view-files">
+
+    <!-- File list view -->
+    <div id="fileListView" style="width:100%;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <div style="font-family:var(--mono);font-size:0.82rem;color:var(--muted);">
+          ไฟล์ .json ในโฟลเดอร์ที่กำหนด
+        </div>
+        <button class="btn btn-primary" onclick="loadFiles()">↻ Refresh</button>
+      </div>
+      <div class="folder-bar">
+        <span>📂</span>
+        <span class="folder-path" id="folderPath">Loading…</span>
+      </div>
+      <div id="fileListContent">
+        <div class="empty-state"><div class="spinner"></div><div>Loading files…</div></div>
+      </div>
+    </div>
+
+    <!-- File detail view -->
+    <div id="fileDetailView" style="width:100%;display:none;flex-direction:column;gap:1rem;">
+      <button class="back-btn" onclick="backToList()">← กลับไปรายการไฟล์</button>
+      <div class="panel" style="flex:1;min-height:400px;">
+        <div class="panel-header">
+          <div class="panel-title">📄 <span id="viewingFile">file.json</span></div>
+          <div class="panel-actions">
+            <button class="btn" onclick="copyFileContent()" id="fileCopyBtn" style="display:none">Copy</button>
+          </div>
+        </div>
+        <div class="result-box" id="fileRawBox" style="min-height:340px;"></div>
+        <div class="status-bar">
+          <span id="fileStatus" class="badge badge-idle">—</span>
+          <span id="fileLineCount" style="color:var(--muted)"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="copied-msg" id="copiedMsg">✓ Copied to clipboard</div>
+
+<script>
+const API = '/api';
+
+// ─── Tab ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('view-' + tab).classList.add('active');
+  if (tab === 'files') loadFiles();
+}
+
+// ─── Validate ───────────────────────────────────────────────────────
+const $input        = document.getElementById('jsonInput');
+const $resultBox    = document.getElementById('resultBox');
+const $resultStatus = document.getElementById('resultStatus');
+const $inputStatus  = document.getElementById('inputStatus');
+const $charCount    = document.getElementById('charCount');
+const $lineCount    = document.getElementById('lineCount');
+const $copyBtn      = document.getElementById('copyBtn');
+const $minifyBtn    = document.getElementById('minifyBtn');
+
+let lastFormatted = '';
+let isMinified    = false;
+
+$input.addEventListener('input', () => {
+  const len = $input.value.length;
+  $charCount.textContent = len.toLocaleString() + ' chars';
+  if (len === 0) setInputStatus('idle', '— idle');
+});
+
+$input.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') validateJson();
+});
+
+async function validateJson() {
+  const json = $input.value.trim();
+  if (!json) { alert('กรุณา paste JSON ก่อน'); return; }
+
+  setInputStatus('idle', '');
+  $inputStatus.innerHTML = '<span class="spinner"></span>';
+  $resultBox.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+
+  try {
+    const res  = await fetch(API + '/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ json })
+    });
+    const data = await res.json();
+    handleValidationResult(data, $resultBox, $resultStatus, $lineCount);
+
+    if (data.valid) {
+      lastFormatted = data.formattedJson;
+      isMinified    = false;
+      setInputStatus('success', '✓ valid');
+      $copyBtn.style.display   = 'inline-flex';
+      $minifyBtn.style.display = 'inline-flex';
+      $minifyBtn.textContent   = 'Minify';
+    } else {
+      setInputStatus('error', '✗ invalid');
+      $copyBtn.style.display   = 'none';
+      $minifyBtn.style.display = 'none';
+      $lineCount.textContent   = '';
+    }
+  } catch (err) {
+    $resultBox.innerHTML = errBox('Cannot connect to server', err.message);
+    setResultStatus('error', '✗ Server Error');
+    setInputStatus('error', '✗ error');
+  }
+}
+
+function handleValidationResult(data, box, statusEl, lineEl) {
+  if (data.valid) {
+    box.innerHTML = syntaxHighlight(data.formattedJson);
+    setStatus(statusEl, 'success', '✓ Valid JSON');
+    if (lineEl) lineEl.textContent = data.lineCount + ' lines';
+  } else {
+    box.innerHTML = errBox(data.message, data.errorDetail);
+    setStatus(statusEl, 'error', '✗ Invalid JSON');
+    if (lineEl) lineEl.textContent = '';
+  }
+}
+
+function setInputStatus(type, text) {
+  $inputStatus.className = 'badge badge-' + (type === 'idle' ? 'idle' : type === 'success' ? 'success' : 'error');
+  $inputStatus.textContent = text;
+}
+
+function setResultStatus(type, text) {
+  setStatus($resultStatus, type, text);
+}
+
+function setStatus(el, type, text) {
+  el.className = 'badge badge-' + (type === 'success' ? 'success' : type === 'error' ? 'error' : 'idle');
+  el.textContent = text;
+}
+
+function clearInput() {
+  $input.value      = '';
+  lastFormatted     = '';
+  isMinified        = false;
+  $charCount.textContent = '0 chars';
+  $lineCount.textContent = '';
+  $resultBox.innerHTML = `<div class="empty-state">
+    <div class="empty-icon">{}</div>
+    <div>Formatted JSON will appear here</div>
+  </div>`;
+  setInputStatus('idle', '— idle');
+  setResultStatus('idle', 'awaiting input');
+  $copyBtn.style.display   = 'none';
+  $minifyBtn.style.display = 'none';
+}
+
+function loadSample() {
+  $input.value = JSON.stringify({
+    application: 'JSON Tool',
+    version: '1.0.0',
+    runtime: {
+      springBoot: '4.0.5',
+      java: '21',
+      java25Ready: true,
+      virtualThreads: true
+    },
+    features: ['validate', 'format', 'minify', 'read files'],
+    timestamp: new Date().toISOString()
+  }, null, 2);
+  $charCount.textContent = $input.value.length.toLocaleString() + ' chars';
+  setInputStatus('idle', '— sample loaded');
+}
+
+function copyResult() {
+  if (!lastFormatted) return;
+  navigator.clipboard.writeText(lastFormatted).then(showCopied);
+}
+
+function toggleMinify() {
+  if (!lastFormatted) return;
+  if (!isMinified) {
+    $resultBox.textContent = JSON.stringify(JSON.parse(lastFormatted));
+    $minifyBtn.textContent = 'Format';
+    isMinified = true;
+  } else {
+    $resultBox.innerHTML = syntaxHighlight(lastFormatted);
+    $minifyBtn.textContent = 'Minify';
+    isMinified = false;
+  }
+}
+
+// ─── Files ──────────────────────────────────────────────────────────
+let fileContentCache = '';
+
+async function loadFiles() {
+  document.getElementById('fileListView').style.display   = 'flex';
+  document.getElementById('fileDetailView').style.display = 'none';
+  const content = document.getElementById('fileListContent');
+  content.innerHTML = '<div class="empty-state"><div class="spinner"></div><div>Loading…</div></div>';
+
+  try {
+    const res  = await fetch(API + '/files');
+    const data = await res.json();
+    document.getElementById('folderPath').textContent = data.folderPath || '—';
+
+    if (!data.files || data.files.length === 0) {
+      content.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div>ไม่พบไฟล์ .json</div>
+        <div style="font-size:.7rem;margin-top:.25rem">เพิ่มไฟล์ .json ลงในโฟลเดอร์ที่กำหนด</div>
+      </div>`;
+      return;
+    }
+
+    content.innerHTML = `<div class="file-grid">${data.files.map(fileCard).join('')}</div>`;
+  } catch (err) {
+    content.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">⚠</div>
+      <div>ไม่สามารถเชื่อมต่อ server</div>
+      <div style="font-size:.7rem;color:var(--red)">${esc(err.message)}</div>
+    </div>`;
+  }
+}
+
+function fileCard(f) {
+  const size      = fmtSize(f.sizeBytes);
+  const date      = new Date(f.lastModified).toLocaleDateString('th-TH');
+  const badgeCls  = f.valid ? 'badge-success' : 'badge-error';
+  const badgeTxt  = f.valid ? '✓ valid' : '✗ invalid';
+  return `<div class="file-card" onclick="openFile('${esc(f.fileName)}')">
+    <div class="file-card-header">
+      <div class="file-name">📄 ${esc(f.fileName)}</div>
+      <span class="badge ${badgeCls}">${badgeTxt}</span>
+    </div>
+    <div class="file-meta"><span>${size}</span><span>${date}</span></div>
+    <div class="file-preview">${esc(f.preview || '')}</div>
+  </div>`;
+}
+
+async function openFile(fileName) {
+  document.getElementById('fileListView').style.display   = 'none';
+  const detail = document.getElementById('fileDetailView');
+  detail.style.display = 'flex';
+  document.getElementById('viewingFile').textContent = fileName;
+
+  const box        = document.getElementById('fileRawBox');
+  const statusEl   = document.getElementById('fileStatus');
+  const lineEl     = document.getElementById('fileLineCount');
+  const fileCopyBtn = document.getElementById('fileCopyBtn');
+
+  box.innerHTML    = '<div class="empty-state"><div class="spinner"></div></div>';
+  setStatus(statusEl, 'idle', 'loading…');
+  fileContentCache = '';
+  fileCopyBtn.style.display = 'none';
+
+  try {
+    const res  = await fetch(`${API}/files/${encodeURIComponent(fileName)}`);
+    const data = await res.json();
+    handleValidationResult(data, box, statusEl, lineEl);
+
+    if (data.valid) {
+      fileContentCache = data.formattedJson;
+      fileCopyBtn.style.display = 'inline-flex';
+    }
+  } catch (err) {
+    box.innerHTML = errBox('Error', err.message);
+    setStatus(statusEl, 'error', '✗ Error');
+  }
+}
+
+function backToList() {
+  document.getElementById('fileDetailView').style.display = 'none';
+  document.getElementById('fileListView').style.display   = 'flex';
+}
+
+function copyFileContent() {
+  if (!fileContentCache) return;
+  navigator.clipboard.writeText(fileContentCache).then(showCopied);
+}
+
+// ─── Utilities ───────────────────────────────────────────────────────
+function esc(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtSize(b) {
+  if (b < 1024)       return b + ' B';
+  if (b < 1024*1024)  return (b/1024).toFixed(1) + ' KB';
+  return (b/1024/1024).toFixed(1) + ' MB';
+}
+
+function errBox(msg, detail) {
+  return `<div class="error-text">
+    <div>${esc(msg)}</div>
+    ${detail ? `<div class="error-detail">${esc(detail)}</div>` : ''}
+  </div>`;
+}
+
+function showCopied() {
+  const msg = document.getElementById('copiedMsg');
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 2000);
+}
+
+function syntaxHighlight(json) {
+  return esc(json).replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[{}\[\],:])/g,
+    m => {
+      if (/^"/.test(m))       return /:$/.test(m) ? `<span class="json-key">${m}</span>` : `<span class="json-string">${m}</span>`;
+      if (/true|false/.test(m)) return `<span class="json-bool">${m}</span>`;
+      if (/null/.test(m))     return `<span class="json-null">${m}</span>`;
+      if (/[{}\[\]]/.test(m)) return `<span class="json-punct">${m}</span>`;
+      if (/,/.test(m))        return `<span class="json-punct">${m}</span>`;
+      return `<span class="json-number">${m}</span>`;
+    }
+  );
+}
+
+// ─── Init ────────────────────────────────────────────────────────────
+loadFiles();
+</script>
+</body>
+</html>
