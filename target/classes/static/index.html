@@ -135,7 +135,7 @@
     display: flex; align-items: center; gap: 8px;
   }
 
-  .panel-actions { display: flex; gap: 6px; }
+  .panel-actions { display: flex; gap: 6px; align-items: center; }
 
   /* ── Buttons ─────────────────────────────────────────────────────── */
   .btn {
@@ -187,6 +187,8 @@
   .badge-success { background: rgba(45,212,191,0.12); color: var(--green); border: 1px solid rgba(45,212,191,0.28); }
   .badge-error   { background: rgba(248,113,113,0.12); color: var(--red);   border: 1px solid rgba(248,113,113,0.28); }
   .badge-idle    { background: rgba(107,125,179,0.12); color: var(--muted); border: 1px solid rgba(107,125,179,0.28); }
+  .badge-common  { background: rgba(79,142,247,0.15);  color: #79b8ff;     border: 1px solid rgba(79,142,247,0.35); }
+  .badge-activity{ background: rgba(251,191,36,0.15);  color: var(--amber); border: 1px solid rgba(251,191,36,0.35); }
 
   /* ── JSON Syntax highlight ───────────────────────────────────────── */
   .json-key    { color: #79b8ff; }
@@ -195,6 +197,12 @@
   .json-bool   { color: #ff7b72; }
   .json-null   { color: #6e7681; }
   .json-punct  { color: var(--muted); }
+  .json-link   {
+    color: #2dd4bf; cursor: pointer; text-decoration: underline;
+    font-weight: 600; background: rgba(45,212,191,0.08);
+    padding: 0 3px; border-radius: 3px;
+  }
+  .json-link:hover { background: rgba(45,212,191,0.2); }
 
   .error-text {
     color: var(--red); background: rgba(248,113,113,0.06);
@@ -280,15 +288,132 @@
     font-family: var(--mono); font-size: 0.76rem; font-weight: 600;
     padding: 0.5rem 1rem; border-radius: 6px;
     opacity: 0; transform: translateY(10px);
-    transition: all 0.2s; pointer-events: none;
+    transition: all 0.2s; pointer-events: none; z-index: 999;
   }
   .copied-msg.show { opacity: 1; transform: translateY(0); }
+
+  /* ══════════════════════════════════════════════════════════════
+     POLICY MANAGEMENT STYLES
+  ══════════════════════════════════════════════════════════════ */
+
+  #view-policy {
+    flex-direction: column;
+  }
+  #view-policy.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Folder browse cards */
+  .pm-folder-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .pm-folder-card {
+    background: var(--surface);
+    border: 1.5px dashed var(--border2);
+    border-radius: 10px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    text-align: center;
+  }
+  .pm-folder-card:hover { border-color: var(--accent); background: var(--surface2); }
+  .pm-folder-card.loaded {
+    border-style: solid;
+    border-color: var(--green);
+    background: rgba(45,212,191,0.04);
+  }
+  .pm-folder-card input[type="file"] { display: none; }
+  .pm-folder-icon { font-size: 2rem; }
+  .pm-folder-name { font-family: var(--mono); font-size: 0.83rem; font-weight: 600; color: var(--text); }
+  .pm-folder-status { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+  .pm-folder-status.ok { color: var(--green); }
+
+  /* Search bar */
+  .pm-search-row {
+    display: flex; gap: 0.6rem; align-items: center;
+    margin-bottom: 1rem;
+  }
+  .pm-search-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 0.5rem 0.85rem;
+    color: var(--text); font-family: var(--mono); font-size: 0.82rem;
+    outline: none; transition: border 0.15s;
+  }
+  .pm-search-input:focus { border-color: var(--accent); }
+  .pm-search-input::placeholder { color: var(--muted); }
+
+  /* Alert banners */
+  .pm-alert {
+    padding: 0.65rem 1rem; border-radius: 6px;
+    font-family: var(--mono); font-size: 0.76rem;
+    margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .pm-alert-success { background: rgba(45,212,191,0.08); color: var(--green); border: 1px solid rgba(45,212,191,0.25); }
+  .pm-alert-error   { background: rgba(248,113,113,0.08); color: var(--red);   border: 1px solid rgba(248,113,113,0.25); }
+  .pm-alert-info    { background: rgba(79,142,247,0.08);  color: #79b8ff;     border: 1px solid rgba(79,142,247,0.25); }
+
+  /* Breadcrumb */
+  .pm-breadcrumb {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+    margin-bottom: 0.75rem; padding: 0.5rem 0.75rem;
+    background: var(--surface2); border-radius: 6px; border: 1px solid var(--border);
+  }
+  .pm-bc-item {
+    color: var(--accent); cursor: pointer; text-decoration: underline;
+  }
+  .pm-bc-item:hover { color: #79b8ff; }
+  .pm-bc-sep { color: var(--border2); }
+  .pm-bc-current { color: var(--text); font-weight: 600; }
+
+  /* File info strip */
+  .pm-file-info {
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    padding: 0.55rem 0.9rem; margin-bottom: 0.75rem;
+    background: var(--surface2); border-radius: 6px; border: 1px solid var(--border);
+    font-family: var(--mono); font-size: 0.76rem;
+  }
+  .pm-file-fname { color: var(--text); font-weight: 600; }
+  .pm-file-path  { color: var(--muted); font-size: 0.68rem; }
+
+  /* JSON viewer */
+  .pm-json-viewer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-family: var(--mono); font-size: 0.8rem; line-height: 1.75;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+    flex: 1; min-height: 300px;
+  }
+
+  /* Section card */
+  .pm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .pm-card-title {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+    color: var(--muted); letter-spacing: 0.07em; text-transform: uppercase;
+    margin-bottom: 0.85rem; display: flex; align-items: center; gap: 8px;
+  }
 
   @media (max-width: 768px) {
     .main { padding: 1rem; }
     .view.active { flex-direction: column; }
     .tabs, header { padding: 0 1rem; }
     .hbadge-blue, .hbadge-amber { display: none; }
+    .pm-folder-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -313,14 +438,18 @@
   <button class="tab" onclick="switchTab('files')" id="tab-files">
     📁 JSON Files
   </button>
+  <button class="tab" onclick="switchTab('policy')" id="tab-policy">
+    🛡 Policy Management
+  </button>
 </div>
 
 <div class="main">
 
-  <!-- ── VALIDATE TAB ──────────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════════
+       VALIDATE TAB
+  ══════════════════════════════════════════════════════════════ -->
   <div class="view active" id="view-validate">
 
-    <!-- Input panel -->
     <div class="panel" style="flex:1; min-height:440px;">
       <div class="panel-header">
         <div class="panel-title">⌨ input.json</div>
@@ -338,7 +467,6 @@
       </div>
     </div>
 
-    <!-- Output panel -->
     <div class="panel" style="flex:1; min-height:440px;">
       <div class="panel-header">
         <div class="panel-title">⬡ output</div>
@@ -362,10 +490,11 @@
 
   </div>
 
-  <!-- ── FILES TAB ─────────────────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════════════════════
+       FILES TAB
+  ══════════════════════════════════════════════════════════════ -->
   <div class="view" id="view-files">
 
-    <!-- File list view -->
     <div id="fileListView" style="width:100%;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
         <div style="font-family:var(--mono);font-size:0.82rem;color:var(--muted);">
@@ -382,7 +511,6 @@
       </div>
     </div>
 
-    <!-- File detail view -->
     <div id="fileDetailView" style="width:100%;display:none;flex-direction:column;gap:1rem;">
       <button class="back-btn" onclick="backToList()">← กลับไปรายการไฟล์</button>
       <div class="panel" style="flex:1;min-height:400px;">
@@ -402,14 +530,74 @@
 
   </div>
 
+  <!-- ══════════════════════════════════════════════════════════════
+       POLICY MANAGEMENT TAB
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="view" id="view-policy">
+
+    <!-- Step 1: Browse folders -->
+    <div class="pm-card">
+      <div class="pm-card-title">📂 Step 1 — เลือก Policy Folders</div>
+      <div class="pm-folder-grid">
+
+        <!-- PolicyCommon -->
+        <div class="pm-folder-card" id="pm-fc-common" onclick="document.getElementById('pm-input-common').click()">
+          <input type="file" id="pm-input-common" webkitdirectory multiple onchange="pmLoadFolder('common', this)">
+          <div class="pm-folder-icon">📘</div>
+          <div class="pm-folder-name">PolicyCommon</div>
+          <div class="pm-folder-status" id="pm-status-common">คลิกเพื่อเลือก folder</div>
+        </div>
+
+        <!-- PolicyActivity -->
+        <div class="pm-folder-card" id="pm-fc-activity" onclick="document.getElementById('pm-input-activity').click()">
+          <input type="file" id="pm-input-activity" webkitdirectory multiple onchange="pmLoadFolder('activity', this)">
+          <div class="pm-folder-icon">📙</div>
+          <div class="pm-folder-name">PolicyActivity</div>
+          <div class="pm-folder-status" id="pm-status-activity">คลิกเพื่อเลือก folder</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Step 2: Search PolicySpec -->
+    <div class="pm-card">
+      <div class="pm-card-title">🔍 Step 2 — ค้นหา Policy Spec</div>
+      <div class="pm-search-row">
+        <input class="pm-search-input" id="pm-search-input" type="text"
+          placeholder="ชื่อไฟล์ PolicySpec เช่น MySpec หรือ MySpec.json"
+          onkeydown="if(event.key==='Enter') pmDoSearch()">
+        <button class="btn btn-primary" onclick="pmDoSearch()">🔍 Search</button>
+        <button class="btn" onclick="pmClearAll()">Clear</button>
+      </div>
+      <div id="pm-search-result"></div>
+    </div>
+
+    <!-- Viewer area (breadcrumb + file content) -->
+    <div id="pm-viewer-area" style="display:none; flex-direction:column;">
+
+      <!-- Breadcrumb -->
+      <div class="pm-breadcrumb" id="pm-breadcrumb"></div>
+
+      <!-- File Info + JSON Viewer -->
+      <div class="pm-file-info" id="pm-file-info"></div>
+      <div id="pm-notice-area"></div>
+      <div class="pm-json-viewer" id="pm-json-viewer"></div>
+
+    </div>
+
+  </div>
+
 </div>
 
 <div class="copied-msg" id="copiedMsg">✓ Copied to clipboard</div>
 
+<!-- ════════════════════════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════════════════════════ -->
 <script>
 const API = '/api';
 
-// ─── Tab ────────────────────────────────────────────────────────────
+/* ─── Tab switching ─────────────────────────────────────────────── */
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -418,7 +606,7 @@ function switchTab(tab) {
   if (tab === 'files') loadFiles();
 }
 
-// ─── Validate ───────────────────────────────────────────────────────
+/* ─── Validate tab ──────────────────────────────────────────────── */
 const $input        = document.getElementById('jsonInput');
 const $resultBox    = document.getElementById('resultBox');
 const $resultStatus = document.getElementById('resultStatus');
@@ -444,36 +632,30 @@ $input.addEventListener('keydown', e => {
 async function validateJson() {
   const json = $input.value.trim();
   if (!json) { alert('กรุณา paste JSON ก่อน'); return; }
-
   setInputStatus('idle', '');
   $inputStatus.innerHTML = '<span class="spinner"></span>';
   $resultBox.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
-
   try {
     const res  = await fetch(API + '/validate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ json })
     });
     const data = await res.json();
     handleValidationResult(data, $resultBox, $resultStatus, $lineCount);
-
     if (data.valid) {
-      lastFormatted = data.formattedJson;
-      isMinified    = false;
+      lastFormatted = data.formattedJson; isMinified = false;
       setInputStatus('success', '✓ valid');
-      $copyBtn.style.display   = 'inline-flex';
+      $copyBtn.style.display = 'inline-flex';
       $minifyBtn.style.display = 'inline-flex';
-      $minifyBtn.textContent   = 'Minify';
+      $minifyBtn.textContent = 'Minify';
     } else {
       setInputStatus('error', '✗ invalid');
-      $copyBtn.style.display   = 'none';
-      $minifyBtn.style.display = 'none';
-      $lineCount.textContent   = '';
+      $copyBtn.style.display = $minifyBtn.style.display = 'none';
+      $lineCount.textContent = '';
     }
   } catch (err) {
     $resultBox.innerHTML = errBox('Cannot connect to server', err.message);
-    setResultStatus('error', '✗ Server Error');
+    setStatus($resultStatus, 'error', '✗ Server Error');
     setInputStatus('error', '✗ error');
   }
 }
@@ -491,180 +673,468 @@ function handleValidationResult(data, box, statusEl, lineEl) {
 }
 
 function setInputStatus(type, text) {
-  $inputStatus.className = 'badge badge-' + (type === 'idle' ? 'idle' : type === 'success' ? 'success' : 'error');
+  $inputStatus.className = 'badge badge-' + (type === 'success' ? 'success' : type === 'error' ? 'error' : 'idle');
   $inputStatus.textContent = text;
 }
-
-function setResultStatus(type, text) {
-  setStatus($resultStatus, type, text);
-}
-
 function setStatus(el, type, text) {
   el.className = 'badge badge-' + (type === 'success' ? 'success' : type === 'error' ? 'error' : 'idle');
   el.textContent = text;
 }
-
 function clearInput() {
-  $input.value      = '';
-  lastFormatted     = '';
-  isMinified        = false;
-  $charCount.textContent = '0 chars';
-  $lineCount.textContent = '';
-  $resultBox.innerHTML = `<div class="empty-state">
-    <div class="empty-icon">{}</div>
-    <div>Formatted JSON will appear here</div>
-  </div>`;
+  $input.value = ''; lastFormatted = ''; isMinified = false;
+  $charCount.textContent = '0 chars'; $lineCount.textContent = '';
+  $resultBox.innerHTML = `<div class="empty-state"><div class="empty-icon">{}</div><div>Formatted JSON will appear here</div></div>`;
   setInputStatus('idle', '— idle');
-  setResultStatus('idle', 'awaiting input');
-  $copyBtn.style.display   = 'none';
-  $minifyBtn.style.display = 'none';
+  setStatus($resultStatus, 'idle', 'awaiting input');
+  $copyBtn.style.display = $minifyBtn.style.display = 'none';
 }
-
 function loadSample() {
-  $input.value = JSON.stringify({
-    application: 'JSON Tool',
-    version: '1.0.0',
-    runtime: {
-      springBoot: '4.0.5',
-      java: '21',
-      java25Ready: true,
-      virtualThreads: true
-    },
+  $input.value = JSON.stringify({ application: 'JSON Tool', version: '1.0.0',
+    runtime: { springBoot: '4.0.5', java: '21', java25Ready: true, virtualThreads: true },
     features: ['validate', 'format', 'minify', 'read files'],
-    timestamp: new Date().toISOString()
-  }, null, 2);
+    timestamp: new Date().toISOString() }, null, 2);
   $charCount.textContent = $input.value.length.toLocaleString() + ' chars';
   setInputStatus('idle', '— sample loaded');
 }
-
 function copyResult() {
   if (!lastFormatted) return;
   navigator.clipboard.writeText(lastFormatted).then(showCopied);
 }
-
 function toggleMinify() {
   if (!lastFormatted) return;
   if (!isMinified) {
     $resultBox.textContent = JSON.stringify(JSON.parse(lastFormatted));
-    $minifyBtn.textContent = 'Format';
-    isMinified = true;
+    $minifyBtn.textContent = 'Format'; isMinified = true;
   } else {
     $resultBox.innerHTML = syntaxHighlight(lastFormatted);
-    $minifyBtn.textContent = 'Minify';
-    isMinified = false;
+    $minifyBtn.textContent = 'Minify'; isMinified = false;
   }
 }
 
-// ─── Files ──────────────────────────────────────────────────────────
+/* ─── Files tab ─────────────────────────────────────────────────── */
 let fileContentCache = '';
 
 async function loadFiles() {
-  document.getElementById('fileListView').style.display   = 'flex';
+  document.getElementById('fileListView').style.display = 'flex';
   document.getElementById('fileDetailView').style.display = 'none';
   const content = document.getElementById('fileListContent');
   content.innerHTML = '<div class="empty-state"><div class="spinner"></div><div>Loading…</div></div>';
-
   try {
-    const res  = await fetch(API + '/files');
+    const res = await fetch(API + '/files');
     const data = await res.json();
     document.getElementById('folderPath').textContent = data.folderPath || '—';
-
     if (!data.files || data.files.length === 0) {
-      content.innerHTML = `<div class="empty-state">
-        <div class="empty-icon">📭</div>
-        <div>ไม่พบไฟล์ .json</div>
-        <div style="font-size:.7rem;margin-top:.25rem">เพิ่มไฟล์ .json ลงในโฟลเดอร์ที่กำหนด</div>
-      </div>`;
+      content.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div>ไม่พบไฟล์ .json</div></div>`;
       return;
     }
-
     content.innerHTML = `<div class="file-grid">${data.files.map(fileCard).join('')}</div>`;
   } catch (err) {
-    content.innerHTML = `<div class="empty-state">
-      <div class="empty-icon">⚠</div>
-      <div>ไม่สามารถเชื่อมต่อ server</div>
-      <div style="font-size:.7rem;color:var(--red)">${esc(err.message)}</div>
-    </div>`;
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠</div><div>ไม่สามารถเชื่อมต่อ server</div><div style="font-size:.7rem;color:var(--red)">${esc(err.message)}</div></div>`;
   }
 }
-
 function fileCard(f) {
-  const size      = fmtSize(f.sizeBytes);
-  const date      = new Date(f.lastModified).toLocaleDateString('th-TH');
-  const badgeCls  = f.valid ? 'badge-success' : 'badge-error';
-  const badgeTxt  = f.valid ? '✓ valid' : '✗ invalid';
+  const size = fmtSize(f.sizeBytes);
+  const date = new Date(f.lastModified).toLocaleDateString('th-TH');
+  const badgeCls = f.valid ? 'badge-success' : 'badge-error';
+  const badgeTxt = f.valid ? '✓ valid' : '✗ invalid';
   return `<div class="file-card" onclick="openFile('${esc(f.fileName)}')">
-    <div class="file-card-header">
-      <div class="file-name">📄 ${esc(f.fileName)}</div>
-      <span class="badge ${badgeCls}">${badgeTxt}</span>
-    </div>
+    <div class="file-card-header"><div class="file-name">📄 ${esc(f.fileName)}</div><span class="badge ${badgeCls}">${badgeTxt}</span></div>
     <div class="file-meta"><span>${size}</span><span>${date}</span></div>
     <div class="file-preview">${esc(f.preview || '')}</div>
   </div>`;
 }
-
 async function openFile(fileName) {
-  document.getElementById('fileListView').style.display   = 'none';
+  document.getElementById('fileListView').style.display = 'none';
   const detail = document.getElementById('fileDetailView');
   detail.style.display = 'flex';
   document.getElementById('viewingFile').textContent = fileName;
-
-  const box        = document.getElementById('fileRawBox');
-  const statusEl   = document.getElementById('fileStatus');
-  const lineEl     = document.getElementById('fileLineCount');
+  const box = document.getElementById('fileRawBox');
+  const statusEl = document.getElementById('fileStatus');
+  const lineEl = document.getElementById('fileLineCount');
   const fileCopyBtn = document.getElementById('fileCopyBtn');
-
-  box.innerHTML    = '<div class="empty-state"><div class="spinner"></div></div>';
+  box.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
   setStatus(statusEl, 'idle', 'loading…');
-  fileContentCache = '';
-  fileCopyBtn.style.display = 'none';
-
+  fileContentCache = ''; fileCopyBtn.style.display = 'none';
   try {
-    const res  = await fetch(`${API}/files/${encodeURIComponent(fileName)}`);
+    const res = await fetch(`${API}/files/${encodeURIComponent(fileName)}`);
     const data = await res.json();
     handleValidationResult(data, box, statusEl, lineEl);
-
-    if (data.valid) {
-      fileContentCache = data.formattedJson;
-      fileCopyBtn.style.display = 'inline-flex';
-    }
+    if (data.valid) { fileContentCache = data.formattedJson; fileCopyBtn.style.display = 'inline-flex'; }
   } catch (err) {
     box.innerHTML = errBox('Error', err.message);
     setStatus(statusEl, 'error', '✗ Error');
   }
 }
-
 function backToList() {
   document.getElementById('fileDetailView').style.display = 'none';
-  document.getElementById('fileListView').style.display   = 'flex';
+  document.getElementById('fileListView').style.display = 'flex';
 }
-
 function copyFileContent() {
   if (!fileContentCache) return;
   navigator.clipboard.writeText(fileContentCache).then(showCopied);
 }
 
-// ─── Utilities ───────────────────────────────────────────────────────
+/* ════════════════════════════════════════════════════════════════
+   POLICY MANAGEMENT — STATE & LOGIC
+════════════════════════════════════════════════════════════════ */
+
+// Store: source → { normalizedRelPath → { name, content, parsed } }
+const pmFolders = { common: {}, activity: {} };
+const pmBreadcrumb = []; // { label, type, source, fileKey }
+
+/* ─── Load folder from file input ─── */
+function pmLoadFolder(source, input) {
+  const files = Array.from(input.files).filter(f => f.name.endsWith('.json'));
+  pmFolders[source] = {};
+  let loaded = 0;
+  if (files.length === 0) return;
+  files.forEach(file => {
+    // webkitRelativePath: "PolicyCommon/CFS/Policy/Spec/foo.json"
+    const parts = file.webkitRelativePath.split('/');
+    const rel = parts.slice(1).join('/'); // remove root folder name
+    const reader = new FileReader();
+    reader.onload = e => {
+      let parsed = null;
+      try { parsed = JSON.parse(e.target.result); } catch (_) {}
+      pmFolders[source][rel] = { name: file.name, content: e.target.result, parsed };
+      loaded++;
+      if (loaded === files.length) {
+        const card = document.getElementById('pm-fc-' + source);
+        const status = document.getElementById('pm-status-' + source);
+        card.classList.add('loaded');
+        status.textContent = '✓ ' + files.length + ' ไฟล์ JSON โหลดแล้ว';
+        status.className = 'pm-folder-status ok';
+      }
+    };
+    reader.readAsText(file);
+  });
+}
+
+/* ─── Normalize path for comparison ─── */
+function pmNorm(p) { return p.replace(/\\/g, '/').toLowerCase(); }
+
+/* ─── Find file in a store by candidate relative paths ─── */
+function pmFindFile(source, candidatePaths) {
+  const store = pmFolders[source];
+  for (const cand of candidatePaths) {
+    const normCand = pmNorm(cand);
+    for (const key of Object.keys(store)) {
+      if (pmNorm(key) === normCand) {
+        return { key, ...store[key] };
+      }
+    }
+  }
+  return null;
+}
+
+/* ─── Build candidate paths for a given policy type ─── */
+function pmCandidates(type, fileName) {
+  // type: 'Spec' | 'Set' | 'Group' | 'Rule'
+  const fname = fileName.endsWith('.json') ? fileName : fileName + '.json';
+  const subFolders = ['CFS', 'RFS'];
+  const paths = [];
+  subFolders.forEach(sf => paths.push(`${sf}/Policy/${type}/${fname}`));
+  // Also try without subfolder prefix
+  paths.push(`Policy/${type}/${fname}`);
+  return paths;
+}
+
+/* ─── Search Policy Spec ─── */
+function pmDoSearch() {
+  const raw = document.getElementById('pm-search-input').value.trim();
+  if (!raw) return;
+  const fname = raw.endsWith('.json') ? raw : raw + '.json';
+  const resultEl = document.getElementById('pm-search-result');
+  resultEl.innerHTML = `<div class="pm-alert pm-alert-info"><span class="spinner"></span> กำลังค้นหา "${fname}"…</div>`;
+
+  // Search Common first, then Activity
+  let found = null, foundSource = null;
+  for (const src of ['common', 'activity']) {
+    const res = pmFindFile(src, pmCandidates('Spec', fname));
+    if (res) { found = res; foundSource = src; break; }
+  }
+
+  if (!found) {
+    resultEl.innerHTML = `<div class="pm-alert pm-alert-error">❌ ไม่พบไฟล์ "${fname}" ใน CFS/Policy/Spec และ RFS/Policy/Spec ของทั้ง PolicyCommon และ PolicyActivity</div>`;
+    return;
+  }
+
+  const srcLabel = foundSource === 'common' ? 'PolicyCommon' : 'PolicyActivity';
+  const badgeCls = foundSource === 'common' ? 'badge-common' : 'badge-activity';
+  resultEl.innerHTML = `<div class="pm-alert pm-alert-success">
+    ✅ พบไฟล์ <strong>${esc(found.name)}</strong> &nbsp;
+    <span class="badge ${badgeCls}">${srcLabel}</span> &nbsp;
+    <span style="color:var(--muted)">${esc(found.key)}</span>
+  </div>`;
+
+  // Reset breadcrumb & open
+  pmBreadcrumb.length = 0;
+  pmBreadcrumb.push({ label: found.name, type: 'Spec', source: foundSource, fileKey: found.key });
+  pmRenderViewer('Spec', found, foundSource);
+}
+
+function pmClearAll() {
+  document.getElementById('pm-search-input').value = '';
+  document.getElementById('pm-search-result').innerHTML = '';
+  document.getElementById('pm-viewer-area').style.display = 'none';
+  pmBreadcrumb.length = 0;
+}
+
+/* ─── Main viewer renderer ─── */
+function pmRenderViewer(type, fileObj, source) {
+  const area = document.getElementById('pm-viewer-area');
+  area.style.display = 'flex';
+
+  // Breadcrumb
+  pmRenderBreadcrumb();
+
+  // File info
+  const srcLabel = source === 'common' ? 'PolicyCommon' : 'PolicyActivity';
+  const badgeCls = source === 'common' ? 'badge-common' : 'badge-activity';
+  document.getElementById('pm-file-info').innerHTML = `
+    <span class="pm-file-fname">📄 ${esc(fileObj.name)}</span>
+    <span class="pm-file-path">${esc(fileObj.key)}</span>
+    <span class="badge ${badgeCls}">${srcLabel}</span>
+    <span class="badge badge-idle" style="text-transform:uppercase;">${type}</span>
+  `;
+
+  const noticeArea = document.getElementById('pm-notice-area');
+  const viewer = document.getElementById('pm-json-viewer');
+
+  if (!fileObj.parsed) {
+    noticeArea.innerHTML = `<div class="pm-alert pm-alert-error">⚠ ไม่สามารถ parse JSON ได้</div>`;
+    viewer.textContent = fileObj.content || '';
+    return;
+  }
+
+  // Render by type
+  let html = '', notice = '';
+  if (type === 'Spec') {
+    const ids = pmCollect(fileObj.parsed, 'policySetId');
+    if (ids.length > 0) {
+      notice = `<div class="pm-alert pm-alert-info">🔗 พบ <strong>policySetId</strong> ${ids.length} รายการ — คลิกค่าสีเขียวเพื่อเปิด PolicySet file</div>`;
+    }
+    html = pmRenderJson(fileObj.parsed, (key, val) => {
+      if (key === 'policySetId' && typeof val === 'string') {
+        return `<span class="json-link" onclick="pmOpenLinked('Set','${escAttr(val)}','${escAttr(source)}')">${esc(val)}</span>`;
+      }
+      return null;
+    });
+
+  } else if (type === 'Set') {
+    const ids = pmCollectInParent(fileObj.parsed, 'policyGroup', 'id');
+    if (ids.length > 0) {
+      notice = `<div class="pm-alert pm-alert-info">🔗 พบ <strong>policyGroup.id</strong> ${ids.length} รายการ — คลิกค่าสีเขียวเพื่อเปิด PolicyGroup file</div>`;
+    }
+    html = pmRenderJson(fileObj.parsed, (key, val, parentKey) => {
+      if (key === 'id' && parentKey === 'policyGroup' && typeof val === 'string') {
+        return `<span class="json-link" onclick="pmOpenLinked('Group','${escAttr(val)}','${escAttr(source)}')">${esc(val)}</span>`;
+      }
+      return null;
+    });
+
+  } else if (type === 'Group') {
+    const ids = pmCollectInParent(fileObj.parsed, 'policyRule', 'id');
+    if (ids.length > 0) {
+      notice = `<div class="pm-alert pm-alert-info">🔗 พบ <strong>policyRule.id</strong> ${ids.length} รายการ — คลิกค่าสีเขียวเพื่อเปิด PolicyRule file</div>`;
+    }
+    html = pmRenderJson(fileObj.parsed, (key, val, parentKey) => {
+      if (key === 'id' && parentKey === 'policyRule' && typeof val === 'string') {
+        return `<span class="json-link" onclick="pmOpenLinked('Rule','${escAttr(val)}','${escAttr(source)}')">${esc(val)}</span>`;
+      }
+      return null;
+    });
+
+  } else {
+    // Rule — plain pretty view
+    html = pmRenderJson(fileObj.parsed, () => null);
+  }
+
+  noticeArea.innerHTML = notice;
+  viewer.innerHTML = html;
+
+  // Scroll viewer into view
+  area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ─── Open linked file (Set / Group / Rule) ─── */
+function pmOpenLinked(type, id, preferSource) {
+  const fname = id.endsWith('.json') ? id : id + '.json';
+  const candidates = pmCandidates(type, fname);
+
+  // Search preferred source first, then the other
+  const searchOrder = preferSource === 'common'
+    ? ['common', 'activity']
+    : ['activity', 'common'];
+
+  let found = null, foundSource = null;
+  for (const src of searchOrder) {
+    const res = pmFindFile(src, candidates);
+    if (res) { found = res; foundSource = src; break; }
+  }
+
+  if (!found) {
+    pmShowToast(`❌ ไม่พบไฟล์ Policy${type}: "${fname}"`, true);
+    return;
+  }
+
+  pmBreadcrumb.push({ label: found.name, type, source: foundSource, fileKey: found.key });
+  pmRenderViewer(type, found, foundSource);
+}
+
+/* ─── Breadcrumb ─── */
+function pmRenderBreadcrumb() {
+  const el = document.getElementById('pm-breadcrumb');
+  let html = '';
+  pmBreadcrumb.forEach((item, i) => {
+    if (i > 0) html += `<span class="pm-bc-sep">›</span>`;
+    if (i === pmBreadcrumb.length - 1) {
+      html += `<span class="pm-bc-current">${esc(item.label)}</span>`;
+    } else {
+      html += `<span class="pm-bc-item" onclick="pmBcNav(${i})">${esc(item.label)}</span>`;
+    }
+  });
+  el.innerHTML = html;
+}
+
+function pmBcNav(idx) {
+  pmBreadcrumb.splice(idx + 1);
+  const item = pmBreadcrumb[idx];
+  const fileObj = pmFolders[item.source][item.fileKey];
+  if (fileObj) pmRenderViewer(item.type, { ...fileObj, key: item.fileKey }, item.source);
+}
+
+/* ─── JSON Renderer with clickable resolver ─── */
+function pmRenderJson(val, resolver, indent = 0, parentKey = null) {
+  const pad  = '  '.repeat(indent);
+  const pad1 = '  '.repeat(indent + 1);
+
+  if (val === null)            return `<span class="json-null">null</span>`;
+  if (typeof val === 'boolean') return `<span class="json-bool">${val}</span>`;
+  if (typeof val === 'number') return `<span class="json-number">${val}</span>`;
+
+  if (typeof val === 'string') {
+    const custom = resolver(parentKey, val, parentKey);
+    if (custom) return `"${custom}"`;
+    return `<span class="json-string">"${esc(val)}"</span>`;
+  }
+
+  if (Array.isArray(val)) {
+    if (val.length === 0) return `<span class="json-punct">[]</span>`;
+    const items = val.map(item =>
+      `${pad1}${pmRenderJsonKeyed(null, item, resolver, indent + 1, parentKey)}`
+    ).join(`<span class="json-punct">,</span>\n`);
+    return `<span class="json-punct">[</span>\n${items}\n${pad}<span class="json-punct">]</span>`;
+  }
+
+  if (typeof val === 'object') {
+    const keys = Object.keys(val);
+    if (keys.length === 0) return `<span class="json-punct">{}</span>`;
+    const items = keys.map(k => {
+      const vHtml = pmRenderJsonKeyed(k, val[k], resolver, indent + 1, k);
+      return `${pad1}<span class="json-key">"${esc(k)}"</span><span class="json-punct">: </span>${vHtml}`;
+    }).join(`<span class="json-punct">,</span>\n`);
+    return `<span class="json-punct">{</span>\n${items}\n${pad}<span class="json-punct">}</span>`;
+  }
+
+  return esc(String(val));
+}
+
+function pmRenderJsonKeyed(key, val, resolver, indent, parentKey) {
+  const pad  = '  '.repeat(indent);
+  const pad1 = '  '.repeat(indent + 1);
+
+  if (val === null)            return `<span class="json-null">null</span>`;
+  if (typeof val === 'boolean') return `<span class="json-bool">${val}</span>`;
+  if (typeof val === 'number') return `<span class="json-number">${val}</span>`;
+
+  if (typeof val === 'string') {
+    const custom = resolver(key, val, parentKey);
+    if (custom) return `"${custom}"`;
+    return `<span class="json-string">"${esc(val)}"</span>`;
+  }
+
+  if (Array.isArray(val)) {
+    if (val.length === 0) return `<span class="json-punct">[]</span>`;
+    const items = val.map(item =>
+      `${pad1}${pmRenderJsonKeyed(key, item, resolver, indent + 1, parentKey)}`
+    ).join(`<span class="json-punct">,</span>\n`);
+    return `<span class="json-punct">[</span>\n${items}\n${pad}<span class="json-punct">]</span>`;
+  }
+
+  if (typeof val === 'object') {
+    const keys = Object.keys(val);
+    if (keys.length === 0) return `<span class="json-punct">{}</span>`;
+    const items = keys.map(k => {
+      const vHtml = pmRenderJsonKeyed(k, val[k], resolver, indent + 1, k);
+      return `${pad1}<span class="json-key">"${esc(k)}"</span><span class="json-punct">: </span>${vHtml}`;
+    }).join(`<span class="json-punct">,</span>\n`);
+    return `<span class="json-punct">{</span>\n${items}\n${pad}<span class="json-punct">}</span>`;
+  }
+
+  return esc(String(val));
+}
+
+/* ─── Collect all values of a specific field name recursively ─── */
+function pmCollect(obj, fieldName, results = []) {
+  if (typeof obj !== 'object' || obj === null) return results;
+  if (Array.isArray(obj)) { obj.forEach(i => pmCollect(i, fieldName, results)); return results; }
+  Object.keys(obj).forEach(k => {
+    if (k === fieldName) results.push(obj[k]);
+    else pmCollect(obj[k], fieldName, results);
+  });
+  return results;
+}
+
+/* ─── Collect 'id' values inside objects whose parent key matches ─── */
+function pmCollectInParent(obj, parentKeyName, childKey, insideParent = false, results = []) {
+  if (typeof obj !== 'object' || obj === null) return results;
+  if (Array.isArray(obj)) {
+    obj.forEach(i => pmCollectInParent(i, parentKeyName, childKey, insideParent, results));
+    return results;
+  }
+  Object.keys(obj).forEach(k => {
+    const nowInside = k === parentKeyName ? true : insideParent;
+    if (nowInside && k === childKey) results.push(obj[k]);
+    pmCollectInParent(obj[k], parentKeyName, childKey, nowInside, results);
+  });
+  return results;
+}
+
+/* ─── Toast notification ─── */
+function pmShowToast(msg, isError = false) {
+  const el = document.getElementById('copiedMsg');
+  el.textContent = msg;
+  el.style.background = isError ? 'var(--red)' : 'var(--green)';
+  el.style.color = '#0d0f14';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ─── Shared utilities ─────────────────────────────────────────── */
 function esc(s) {
-  if (!s) return '';
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(s) {
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 
 function fmtSize(b) {
-  if (b < 1024)       return b + ' B';
-  if (b < 1024*1024)  return (b/1024).toFixed(1) + ' KB';
+  if (b < 1024) return b + ' B';
+  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
   return (b/1024/1024).toFixed(1) + ' MB';
 }
 
 function errBox(msg, detail) {
-  return `<div class="error-text">
-    <div>${esc(msg)}</div>
-    ${detail ? `<div class="error-detail">${esc(detail)}</div>` : ''}
-  </div>`;
+  return `<div class="error-text"><div>${esc(msg)}</div>${detail ? `<div class="error-detail">${esc(detail)}</div>` : ''}</div>`;
 }
 
 function showCopied() {
   const msg = document.getElementById('copiedMsg');
+  msg.textContent = '✓ Copied to clipboard';
+  msg.style.background = 'var(--green)';
   msg.classList.add('show');
   setTimeout(() => msg.classList.remove('show'), 2000);
 }
@@ -673,17 +1143,17 @@ function syntaxHighlight(json) {
   return esc(json).replace(
     /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[{}\[\],:])/g,
     m => {
-      if (/^"/.test(m))       return /:$/.test(m) ? `<span class="json-key">${m}</span>` : `<span class="json-string">${m}</span>`;
+      if (/^"/.test(m))        return /:$/.test(m) ? `<span class="json-key">${m}</span>` : `<span class="json-string">${m}</span>`;
       if (/true|false/.test(m)) return `<span class="json-bool">${m}</span>`;
-      if (/null/.test(m))     return `<span class="json-null">${m}</span>`;
-      if (/[{}\[\]]/.test(m)) return `<span class="json-punct">${m}</span>`;
-      if (/,/.test(m))        return `<span class="json-punct">${m}</span>`;
+      if (/null/.test(m))       return `<span class="json-null">${m}</span>`;
+      if (/[{}\[\]]/.test(m))   return `<span class="json-punct">${m}</span>`;
+      if (/,/.test(m))          return `<span class="json-punct">${m}</span>`;
       return `<span class="json-number">${m}</span>`;
     }
   );
 }
 
-// ─── Init ────────────────────────────────────────────────────────────
+/* ─── Init ─────────────────────────────────────────────────────── */
 loadFiles();
 </script>
 </body>
