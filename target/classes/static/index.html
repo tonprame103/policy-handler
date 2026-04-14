@@ -511,14 +511,22 @@
           <button class="btn btn-primary" onclick="fvLoadServer()">↻ Refresh</button>
         </div>
         <!-- Local row -->
-        <div id="fv-local-row" style="display:none;align-items:center;gap:0.6rem;">
+        <div id="fv-local-row" style="display:none;flex-direction:column;gap:0.6rem;">
           <input type="file" id="fv-local-input" webkitdirectory multiple onchange="fvLoadLocal(this)" style="display:none">
-          <div id="fv-local-status"
-            style="flex:1;background:var(--surface2);border:1.5px dashed var(--border2);border-radius:6px;padding:0.6rem 1rem;font-family:var(--mono);font-size:0.76rem;color:var(--muted);cursor:pointer;text-align:center;"
-            onclick="document.getElementById('fv-local-input').click()">
-            คลิกเพื่อเลือก Folder
+          <div style="display:flex;align-items:center;gap:0.6rem;">
+            <div id="fv-local-status"
+              style="flex:1;background:var(--surface2);border:1.5px dashed var(--border2);border-radius:6px;padding:0.6rem 1rem;font-family:var(--mono);font-size:0.76rem;color:var(--muted);cursor:pointer;text-align:center;"
+              onclick="fvBrowseLocal()">
+              คลิกเพื่อเลือก Folder
+            </div>
+            <button class="btn btn-primary" onclick="fvBrowseLocal()">📂 Browse</button>
+            <button class="btn btn-danger"  id="fv-clear-btn" onclick="fvClearLocal()" style="display:none">✕ Clear</button>
           </div>
-          <button class="btn btn-primary" onclick="document.getElementById('fv-local-input').click()">Browse</button>
+          <div id="fv-local-progress" style="display:none;">
+            <div style="background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
+              <div id="fv-local-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width 0.1s;"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -814,23 +822,76 @@ async function fvLoadServer() {
 }
 
 /* ── Load from local folder ── */
+/* ── Browse button — reset input so same folder can be re-selected ── */
+function fvBrowseLocal() {
+  const inp = document.getElementById('fv-local-input');
+  inp.value = '';          // clear cached value so onchange fires even for same folder
+  inp.click();
+}
+
+/* ── Clear local folder data ── */
+function fvClearLocal() {
+  fvAllFiles = [];
+  // reset input
+  const inp = document.getElementById('fv-local-input');
+  inp.value = '';
+
+  // reset status UI
+  const status = document.getElementById('fv-local-status');
+  status.textContent  = 'คลิกเพื่อเลือก Folder';
+  status.style.borderStyle = 'dashed';
+  status.style.borderColor = 'var(--border2)';
+  status.style.color  = 'var(--muted)';
+
+  document.getElementById('fv-clear-btn').style.display    = 'none';
+  document.getElementById('fv-local-progress').style.display = 'none';
+  document.getElementById('fv-summary').style.display      = 'none';
+
+  fvShowEmpty('เลือก folder เพื่อเริ่มต้น');
+}
+
+/* ── Load local folder — Promise.all (fixes async race condition) ── */
 function fvLoadLocal(input) {
   const allFiles = Array.from(input.files).filter(f => f.name.endsWith('.json'));
+  const totalAll = input.files.length;
+
+  const statusEl   = document.getElementById('fv-local-status');
+  const progressEl = document.getElementById('fv-local-progress');
+  const barEl      = document.getElementById('fv-local-progress-bar');
+  const clearBtn   = document.getElementById('fv-clear-btn');
+
   if (allFiles.length === 0) {
-    document.getElementById('fv-local-status').textContent = '⚠ ไม่พบไฟล์ .json';
+    statusEl.textContent = `⚠ ไม่พบไฟล์ .json (พบไฟล์ทั้งหมด ${totalAll} ไฟล์)`;
     return;
   }
+
+  // Reset state
   fvAllFiles = [];
+  fvCurrentFile = null;
   fvShowListLoading();
-  document.getElementById('fv-local-status').textContent = `กำลังโหลด 0 / ${allFiles.length}…`;
 
-  let done = 0;
-  const results = new Array(allFiles.length);
+  // Reset status styling
+  statusEl.style.borderStyle  = 'dashed';
+  statusEl.style.borderColor  = 'var(--border2)';
+  statusEl.style.color        = 'var(--muted)';
+  statusEl.textContent        = `พบ ${allFiles.length} ไฟล์ JSON — กำลังโหลด…`;
+  progressEl.style.display    = 'block';
+  barEl.style.width           = '0%';
+  clearBtn.style.display      = 'none';
 
-  allFiles.forEach((file, idx) => {
-    const parts = file.webkitRelativePath.split('/');
+  const folderName = allFiles[0].webkitRelativePath
+    ? allFiles[0].webkitRelativePath.split('/')[0]
+    : 'Local Folder';
+
+  let doneCount = 0;
+
+  // Use Promise.all — each file gets its own Promise, resolved when FileReader finishes
+  const promises = allFiles.map((file, idx) => new Promise(resolve => {
+    const parts   = file.webkitRelativePath ? file.webkitRelativePath.split('/') : [file.name];
     const relPath = parts.length > 1 ? parts.slice(1).join('/') : file.name;
+
     const reader = new FileReader();
+
     reader.onload = e => {
       const raw = e.target.result;
       let valid = true, error = null, errorDetail = null, formatted = null;
@@ -838,36 +899,54 @@ function fvLoadLocal(input) {
         const parsed = JSON.parse(raw);
         formatted = JSON.stringify(parsed, null, 2);
       } catch (ex) {
-        valid = false;
-        error = ex.message;
-        // Parse line/col from error message
+        valid       = false;
+        error       = ex.message;
         errorDetail = fvParseJsonError(ex.message, raw);
       }
-      results[idx] = {
+
+      doneCount++;
+      const pct = Math.round((doneCount / allFiles.length) * 100);
+      barEl.style.width    = pct + '%';
+      statusEl.textContent = `กำลังโหลด ${doneCount} / ${allFiles.length}…`;
+
+      resolve({
         name: file.name, relPath, size: file.size,
         valid, error, errorDetail, content: raw, formatted, source: 'local'
-      };
-      done++;
-      document.getElementById('fv-local-status').textContent = `กำลังโหลด ${done} / ${allFiles.length}…`;
-      if (done === allFiles.length) {
-        fvAllFiles = results;
-        const folderName = allFiles[0].webkitRelativePath.split('/')[0] || 'Local Folder';
-        document.getElementById('fv-local-status').textContent =
-          `✓ โหลดแล้ว ${allFiles.length} ไฟล์ จาก "${folderName}"`;
-        document.getElementById('fv-local-status').style.borderStyle = 'solid';
-        document.getElementById('fv-local-status').style.borderColor = 'var(--green)';
-        document.getElementById('fv-local-status').style.color = 'var(--green)';
-        fvRenderSummary();
-        fvRenderList();
-      }
+      });
     };
+
     reader.onerror = () => {
-      results[idx] = { name: file.name, relPath, size: file.size, valid: false,
-        error: 'Cannot read file', errorDetail: null, content: null, formatted: null, source: 'local' };
-      done++;
-      if (done === allFiles.length) { fvAllFiles = results; fvRenderSummary(); fvRenderList(); }
+      doneCount++;
+      barEl.style.width = Math.round((doneCount / allFiles.length) * 100) + '%';
+      resolve({
+        name: file.name, relPath, size: file.size,
+        valid: false, error: 'ไม่สามารถอ่านไฟล์ได้',
+        errorDetail: null, content: null, formatted: null, source: 'local'
+      });
     };
+
     reader.readAsText(file);
+  }));
+
+  // Wait for ALL files to finish before rendering
+  Promise.all(promises).then(results => {
+    fvAllFiles = results;
+
+    // Update status
+    const validCount   = results.filter(r => r.valid).length;
+    const invalidCount = results.length - validCount;
+
+    statusEl.textContent  = `✓ "${folderName}" — ${results.length} ไฟล์ (Valid: ${validCount}, Invalid: ${invalidCount})`;
+    statusEl.style.borderStyle = 'solid';
+    statusEl.style.borderColor = invalidCount > 0 ? 'var(--amber)' : 'var(--green)';
+    statusEl.style.color       = invalidCount > 0 ? 'var(--amber)' : 'var(--green)';
+    barEl.style.width          = '100%';
+    clearBtn.style.display     = 'inline-flex';
+
+    setTimeout(() => { progressEl.style.display = 'none'; }, 600);
+
+    fvRenderSummary();
+    fvRenderList();
   });
 }
 
