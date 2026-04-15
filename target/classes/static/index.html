@@ -781,13 +781,25 @@ let fvCopyCache = '';
 /* ── Switch source mode ── */
 function fvSetSource(src) {
   fvSource = src;
+
+  // reset state ให้ clean ทุกครั้งที่ switch mode
+  fvAllFiles    = [];
+  fvCurrentFile = null;
+  fvEditMode    = false;
+  fvEditValid   = false;
+  document.getElementById('fv-detail').style.display    = 'none';
+  document.getElementById('fv-list-area').style.display = '';
+  document.getElementById('fv-summary').style.display   = 'none';
+
   document.getElementById('fv-server-row').style.display = src === 'server' ? 'flex' : 'none';
   document.getElementById('fv-local-row').style.display  = src === 'local'  ? 'flex' : 'none';
   document.getElementById('fv-src-server').style.cssText = src === 'server'
     ? 'border-color:var(--accent);color:var(--accent);' : '';
   document.getElementById('fv-src-local').style.cssText = src === 'local'
     ? 'border-color:var(--accent);color:var(--accent);' : '';
+
   if (src === 'server') fvLoadServer();
+  else fvShowEmpty('คลิก Browse เพื่อเลือก Folder');
 }
 
 /* ── Load from server API ── */
@@ -930,6 +942,7 @@ function fvLoadLocal(input) {
 
   // Wait for ALL files to finish before rendering
   Promise.all(promises).then(results => {
+    if (fvSource !== 'local') return; // guard: ถ้า user สลับ mode ไปแล้วให้ยกเลิก
     fvAllFiles = results;
 
     // Update status
