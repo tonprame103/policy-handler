@@ -1,0 +1,1926 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Tool — Validator & Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --surface3: #232840;
+    --border: #2a3050;
+    --border2: #3a4470;
+    --accent: #4f8ef7;
+    --accent2: #7c4dff;
+    --green: #2dd4bf;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --text: #e2e8f8;
+    --muted: #6b7db3;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Space Grotesk', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────────── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: white;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .header-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hbadge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--mono); font-size: 0.68rem; font-weight: 500;
+    padding: 0.2rem 0.6rem; border-radius: 4px;
+  }
+
+  .hbadge-green { background: rgba(45,212,191,0.12); color: var(--green); border: 1px solid rgba(45,212,191,0.25); }
+  .hbadge-blue  { background: rgba(79,142,247,0.12); color: var(--accent); border: 1px solid rgba(79,142,247,0.25); }
+  .hbadge-amber { background: rgba(251,191,36,0.12); color: var(--amber); border: 1px solid rgba(251,191,36,0.25); }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 5px var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Tabs ────────────────────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0 2rem;
+  }
+
+  .tab {
+    padding: 0.85rem 1.5rem;
+    font-family: var(--mono); font-size: 0.78rem; font-weight: 500;
+    color: var(--muted); cursor: pointer;
+    border: none; border-bottom: 2px solid transparent;
+    background: none;
+    display: flex; align-items: center; gap: 8px;
+    transition: color 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Main ────────────────────────────────────────────────────────── */
+  .main { flex: 1; display: flex; padding: 1.5rem 2rem; gap: 1.5rem; }
+
+  .view { display: none; width: 100%; }
+  .view.active { display: flex; gap: 1.5rem; width: 100%; }
+
+  /* ── Panel ───────────────────────────────────────────────────────── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .panel-title {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
+    color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .panel-actions { display: flex; gap: 6px; align-items: center; }
+
+  /* ── Buttons ─────────────────────────────────────────────────────── */
+  .btn {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
+    padding: 0.28rem 0.75rem; border-radius: 5px;
+    cursor: pointer; border: 1px solid var(--border2);
+    background: transparent; color: var(--muted);
+    transition: all 0.15s; letter-spacing: 0.02em;
+  }
+  .btn:hover { color: var(--text); border-color: var(--accent); background: rgba(79,142,247,0.08); }
+
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+  .btn-primary:hover { background: #3b7af0; border-color: #3b7af0; color: white; }
+
+  .btn-danger { color: var(--red); }
+  .btn-danger:hover { border-color: var(--red); background: rgba(248,113,113,0.08); color: var(--red); }
+
+  /* ── Textarea ────────────────────────────────────────────────────── */
+  textarea {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-family: var(--mono); font-size: 0.82rem;
+    line-height: 1.7; padding: 1rem 1.25rem;
+    resize: none; min-height: 320px;
+  }
+  textarea::placeholder { color: var(--muted); }
+
+  /* ── Result box ──────────────────────────────────────────────────── */
+  .result-box {
+    flex: 1;
+    font-family: var(--mono); font-size: 0.82rem; line-height: 1.7;
+    padding: 1rem 1.25rem; white-space: pre-wrap;
+    overflow: auto; color: var(--text); min-height: 200px;
+  }
+
+  /* ── Status bar ──────────────────────────────────────────────────── */
+  .status-bar {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.45rem 1rem; border-top: 1px solid var(--border);
+    background: var(--surface2);
+    font-family: var(--mono); font-size: 0.72rem;
+  }
+
+  /* ── Badges ──────────────────────────────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 0.18rem 0.55rem; border-radius: 4px;
+    font-size: 0.68rem; font-weight: 500; font-family: var(--mono);
+  }
+  .badge-success { background: rgba(45,212,191,0.12); color: var(--green); border: 1px solid rgba(45,212,191,0.28); }
+  .badge-error   { background: rgba(248,113,113,0.12); color: var(--red);   border: 1px solid rgba(248,113,113,0.28); }
+  .badge-idle    { background: rgba(107,125,179,0.12); color: var(--muted); border: 1px solid rgba(107,125,179,0.28); }
+  .badge-common  { background: rgba(79,142,247,0.15);  color: #79b8ff;     border: 1px solid rgba(79,142,247,0.35); }
+  .badge-activity{ background: rgba(251,191,36,0.15);  color: var(--amber); border: 1px solid rgba(251,191,36,0.35); }
+
+  /* ── JSON Syntax highlight ───────────────────────────────────────── */
+  .json-key    { color: #79b8ff; }
+  .json-string { color: #9ecbff; }
+  .json-number { color: #f0883e; }
+  .json-bool   { color: #ff7b72; }
+  .json-null   { color: #6e7681; }
+  .json-punct  { color: var(--muted); }
+  .json-link   {
+    color: #2dd4bf; cursor: pointer; text-decoration: underline;
+    font-weight: 600; background: rgba(45,212,191,0.08);
+    padding: 0 3px; border-radius: 3px;
+  }
+  .json-link:hover { background: rgba(45,212,191,0.2); }
+
+  .error-text {
+    color: var(--red); background: rgba(248,113,113,0.06);
+    border-left: 3px solid var(--red);
+    padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; margin: 1rem;
+  }
+  .error-detail { color: var(--muted); font-size: 0.78rem; margin-top: 0.5rem; }
+
+  /* ── File grid ───────────────────────────────────────────────────── */
+  .file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .file-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1rem; cursor: pointer;
+    transition: all 0.15s; display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .file-card:hover { border-color: var(--accent); background: var(--surface3); transform: translateY(-1px); }
+
+  .file-card-header { display: flex; align-items: center; justify-content: space-between; }
+
+  .file-name {
+    font-family: var(--mono); font-size: 0.83rem; font-weight: 500;
+    color: var(--text); display: flex; align-items: center; gap: 8px;
+  }
+
+  .file-meta {
+    font-family: var(--mono); font-size: 0.68rem; color: var(--muted);
+    display: flex; gap: 1rem;
+  }
+
+  .file-preview {
+    font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+    background: var(--surface); padding: 0.4rem 0.65rem;
+    border-radius: 5px; border: 1px solid var(--border);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ── Folder bar ──────────────────────────────────────────────────── */
+  .folder-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0.6rem 1rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 1rem;
+    font-family: var(--mono); font-size: 0.76rem; color: var(--muted);
+  }
+  .folder-path { color: var(--accent); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Misc ────────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid var(--border2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 3rem; gap: 0.75rem;
+    color: var(--muted); font-family: var(--mono); font-size: 0.83rem; text-align: center;
+  }
+  .empty-icon { font-size: 2.5rem; opacity: 0.35; }
+
+  .back-btn {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 0.78rem; color: var(--muted);
+    cursor: pointer; background: none; border: none; padding: 0;
+    transition: color 0.15s;
+  }
+  .back-btn:hover { color: var(--accent); }
+
+  .copied-msg {
+    position: fixed; bottom: 2rem; right: 2rem;
+    background: var(--green); color: #0d0f14;
+    font-family: var(--mono); font-size: 0.76rem; font-weight: 600;
+    padding: 0.5rem 1rem; border-radius: 6px;
+    opacity: 0; transform: translateY(10px);
+    transition: all 0.2s; pointer-events: none; z-index: 999;
+  }
+  .copied-msg.show { opacity: 1; transform: translateY(0); }
+
+  /* ══════════════════════════════════════════════════════════════
+     POLICY MANAGEMENT STYLES
+  ══════════════════════════════════════════════════════════════ */
+
+  #view-policy {
+    flex-direction: column;
+  }
+  #view-policy.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Folder browse cards */
+  .pm-folder-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .pm-folder-card {
+    background: var(--surface);
+    border: 1.5px dashed var(--border2);
+    border-radius: 10px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    text-align: center;
+  }
+  .pm-folder-card:hover { border-color: var(--accent); background: var(--surface2); }
+  .pm-folder-card.loaded {
+    border-style: solid;
+    border-color: var(--green);
+    background: rgba(45,212,191,0.04);
+  }
+  .pm-folder-card input[type="file"] { display: none; }
+  .pm-folder-icon { font-size: 2rem; }
+  .pm-folder-name { font-family: var(--mono); font-size: 0.83rem; font-weight: 600; color: var(--text); }
+  .pm-folder-status { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+  .pm-folder-status.ok { color: var(--green); }
+
+  /* Search bar */
+  .pm-search-row {
+    display: flex; gap: 0.6rem; align-items: center;
+    margin-bottom: 1rem;
+  }
+  .pm-search-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 0.5rem 0.85rem;
+    color: var(--text); font-family: var(--mono); font-size: 0.82rem;
+    outline: none; transition: border 0.15s;
+  }
+  .pm-search-input:focus { border-color: var(--accent); }
+  .pm-search-input::placeholder { color: var(--muted); }
+
+  /* Alert banners */
+  .pm-alert {
+    padding: 0.65rem 1rem; border-radius: 6px;
+    font-family: var(--mono); font-size: 0.76rem;
+    margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .pm-alert-success { background: rgba(45,212,191,0.08); color: var(--green); border: 1px solid rgba(45,212,191,0.25); }
+  .pm-alert-error   { background: rgba(248,113,113,0.08); color: var(--red);   border: 1px solid rgba(248,113,113,0.25); }
+  .pm-alert-info    { background: rgba(79,142,247,0.08);  color: #79b8ff;     border: 1px solid rgba(79,142,247,0.25); }
+
+  /* Breadcrumb */
+  .pm-breadcrumb {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+    margin-bottom: 0.75rem; padding: 0.5rem 0.75rem;
+    background: var(--surface2); border-radius: 6px; border: 1px solid var(--border);
+  }
+  .pm-bc-item {
+    color: var(--accent); cursor: pointer; text-decoration: underline;
+  }
+  .pm-bc-item:hover { color: #79b8ff; }
+  .pm-bc-sep { color: var(--border2); }
+  .pm-bc-current { color: var(--text); font-weight: 600; }
+
+  /* File info strip */
+  .pm-file-info {
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    padding: 0.55rem 0.9rem; margin-bottom: 0.75rem;
+    background: var(--surface2); border-radius: 6px; border: 1px solid var(--border);
+    font-family: var(--mono); font-size: 0.76rem;
+  }
+  .pm-file-fname { color: var(--text); font-weight: 600; }
+  .pm-file-path  { color: var(--muted); font-size: 0.68rem; }
+
+  /* JSON viewer */
+  .pm-json-viewer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    font-family: var(--mono); font-size: 0.8rem; line-height: 1.75;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+    flex: 1; min-height: 300px;
+  }
+
+  /* Section card */
+  .pm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .pm-card-title {
+    font-family: var(--mono); font-size: 0.72rem; font-weight: 600;
+    color: var(--muted); letter-spacing: 0.07em; text-transform: uppercase;
+    margin-bottom: 0.85rem; display: flex; align-items: center; gap: 8px;
+  }
+
+  @media (max-width: 768px) {
+    .main { padding: 1rem; }
+    .view.active { flex-direction: column; }
+    .tabs, header { padding: 0 1rem; }
+    .hbadge-blue, .hbadge-amber { display: none; }
+    .pm-folder-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">{}</div>
+    <div class="logo-text">JSON<span>Tool</span></div>
+  </div>
+  <div class="header-badges">
+    <span class="hbadge hbadge-blue">Spring Boot 4.0.5</span>
+    <span class="hbadge hbadge-amber">Java 21 → 25 ready</span>
+    <span class="hbadge hbadge-green"><div class="dot"></div>running</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('validate')" id="tab-validate">
+    ✓ Validate &amp; Format
+  </button>
+  <button class="tab" onclick="switchTab('files')" id="tab-files">
+    📁 JSON Files
+  </button>
+  <button class="tab" onclick="switchTab('policy')" id="tab-policy">
+    🛡 Policy Management
+  </button>
+</div>
+
+<div class="main">
+
+  <!-- ══════════════════════════════════════════════════════════════
+       VALIDATE TAB
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="view active" id="view-validate">
+
+    <div class="panel" style="flex:1; min-height:440px;">
+      <div class="panel-header">
+        <div class="panel-title">⌨ input.json</div>
+        <div class="panel-actions">
+          <button class="btn" onclick="loadSample()">Load Sample</button>
+          <button class="btn btn-danger" onclick="clearInput()">Clear</button>
+          <button class="btn btn-primary" onclick="validateJson()">▶ Validate</button>
+        </div>
+      </div>
+      <textarea id="jsonInput"
+        placeholder='Paste your JSON here...&#10;&#10;Tip: Ctrl+Enter เพื่อ validate'></textarea>
+      <div class="status-bar">
+        <span id="inputStatus" class="badge badge-idle">— idle</span>
+        <span id="charCount" style="color:var(--muted)">0 chars</span>
+      </div>
+    </div>
+
+    <div class="panel" style="flex:1; min-height:440px;">
+      <div class="panel-header">
+        <div class="panel-title">⬡ output</div>
+        <div class="panel-actions">
+          <button class="btn" onclick="copyResult()" id="copyBtn" style="display:none">Copy</button>
+          <button class="btn" onclick="toggleMinify()" id="minifyBtn" style="display:none">Minify</button>
+        </div>
+      </div>
+      <div class="result-box" id="resultBox">
+        <div class="empty-state">
+          <div class="empty-icon">{}</div>
+          <div>Formatted JSON will appear here</div>
+          <div style="font-size:0.7rem;margin-top:.25rem">Paste JSON แล้วกด Validate</div>
+        </div>
+      </div>
+      <div class="status-bar">
+        <span id="resultStatus" class="badge badge-idle">awaiting input</span>
+        <span id="lineCount" style="color:var(--muted)"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FILES TAB  — local folder browse + validation report
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="view" id="view-files">
+    <div style="width:100%;display:flex;flex-direction:column;gap:1rem;">
+
+      <!-- Source card -->
+      <div class="pm-card">
+        <div class="pm-card-title">📂 เลือกแหล่งไฟล์ JSON</div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:0.85rem;">
+          <button class="btn" id="fv-src-server" onclick="fvSetSource('server')" style="border-color:var(--accent);color:var(--accent);">🖥 Server Folder</button>
+          <button class="btn" id="fv-src-local"  onclick="fvSetSource('local')">💻 Local Folder</button>
+        </div>
+        <!-- Server row -->
+        <div id="fv-server-row" style="display:flex;align-items:center;gap:0.6rem;">
+          <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.85rem;flex:1;font-family:var(--mono);font-size:0.76rem;">
+            <span>📂</span><span id="fv-server-path" style="color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">Loading…</span>
+          </div>
+          <button class="btn btn-primary" onclick="fvLoadServer()">↻ Refresh</button>
+        </div>
+        <!-- Local row -->
+        <div id="fv-local-row" style="display:none;flex-direction:column;gap:0.6rem;">
+          <input type="file" id="fv-local-input" webkitdirectory multiple onchange="fvLoadLocal(this)" style="display:none">
+          <div style="display:flex;align-items:center;gap:0.6rem;">
+            <div id="fv-local-status"
+              style="flex:1;background:var(--surface2);border:1.5px dashed var(--border2);border-radius:6px;padding:0.6rem 1rem;font-family:var(--mono);font-size:0.76rem;color:var(--muted);cursor:pointer;text-align:center;"
+              onclick="fvBrowseLocal()">
+              คลิกเพื่อเลือก Folder
+            </div>
+            <button class="btn btn-primary" onclick="fvBrowseLocal()">📂 Browse</button>
+            <button class="btn btn-danger"  id="fv-clear-btn" onclick="fvClearLocal()" style="display:none">✕ Clear</button>
+          </div>
+          <div id="fv-local-progress" style="display:none;">
+            <div style="background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
+              <div id="fv-local-progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width 0.1s;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary + filter bar -->
+      <div id="fv-summary" style="display:none;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.5rem 0.85rem;font-family:var(--mono);font-size:0.76rem;display:flex;align-items:center;gap:0.5rem;">
+          📄 <span id="fvs-total" style="font-weight:600;color:var(--text);">0</span><span style="color:var(--muted);">ไฟล์</span>
+        </div>
+        <div style="background:rgba(45,212,191,0.06);border:1px solid rgba(45,212,191,0.25);border-radius:8px;padding:0.5rem 0.85rem;font-family:var(--mono);font-size:0.76rem;display:flex;align-items:center;gap:0.5rem;">
+          ✅ <span id="fvs-valid" style="font-weight:600;color:var(--green);">0</span><span style="color:var(--muted);">Valid</span>
+        </div>
+        <div style="background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.25);border-radius:8px;padding:0.5rem 0.85rem;font-family:var(--mono);font-size:0.76rem;display:flex;align-items:center;gap:0.5rem;">
+          ❌ <span id="fvs-invalid" style="font-weight:600;color:var(--red);">0</span><span style="color:var(--muted);">Invalid</span>
+        </div>
+        <div style="flex:1;"></div>
+        <input class="pm-search-input" id="fv-filter-input" placeholder="Filter ชื่อไฟล์…" oninput="fvApplyFilter()" style="max-width:200px;padding:0.4rem 0.75rem;font-size:0.74rem;">
+        <div style="display:flex;gap:4px;">
+          <button class="btn" id="fv-tab-all"     onclick="fvSetTab('all')"     style="font-size:0.72rem;border-color:var(--accent);color:var(--accent);">ทั้งหมด</button>
+          <button class="btn" id="fv-tab-valid"   onclick="fvSetTab('valid')"   style="font-size:0.72rem;">Valid</button>
+          <button class="btn" id="fv-tab-invalid" onclick="fvSetTab('invalid')" style="font-size:0.72rem;">Invalid</button>
+        </div>
+      </div>
+
+      <!-- File list -->
+      <div id="fv-list-area">
+        <div class="empty-state"><div class="empty-icon">📂</div><div>เลือก folder เพื่อเริ่มต้น</div></div>
+      </div>
+
+      <!-- Detail panel -->
+      <div id="fv-detail" style="display:none;flex-direction:column;gap:0.75rem;">
+        <button class="back-btn" onclick="fvCloseDetail()">← กลับไปรายการไฟล์</button>
+        <div class="panel" style="flex:1;min-height:460px;">
+          <div class="panel-header">
+            <div class="panel-title">📄 <span id="fv-detail-name">file.json</span></div>
+            <div class="panel-actions">
+              <span id="fv-detail-badge" class="badge badge-idle"></span>
+              <button class="btn" id="fv-edit-btn"            onclick="fvEnterEdit()"    style="display:none">✏ Edit</button>
+              <button class="btn" id="fv-cancel-btn"          onclick="fvCancelEdit()"   style="display:none">✕ Cancel</button>
+              <button class="btn" id="fv-validate-edit-btn"   onclick="fvValidateEdit()" style="display:none">▶ Validate</button>
+              <button class="btn btn-primary" id="fv-save-btn" onclick="fvSaveFile()"    style="display:none">💾 Save</button>
+              <button class="btn" id="fv-copy-btn"            onclick="fvCopyContent()"  style="display:none">Copy</button>
+            </div>
+          </div>
+          <div id="fv-detail-notice" style="padding:0.5rem 1rem 0;"></div>
+          <div class="result-box" id="fv-detail-box" style="min-height:340px;"></div>
+          <textarea id="fv-edit-area"
+            style="display:none;flex:1;min-height:380px;background:var(--surface2);border:none;border-top:1px solid var(--border);outline:none;color:var(--text);font-family:var(--mono);font-size:0.82rem;line-height:1.7;padding:1rem 1.25rem;resize:vertical;width:100%;"
+            spellcheck="false" oninput="fvOnEditInput()" placeholder="แก้ไข JSON ที่นี่…"></textarea>
+          <div class="status-bar">
+            <span id="fv-detail-info"    style="color:var(--muted);font-family:var(--mono);font-size:0.72rem;"></span>
+            <span id="fv-edit-status"    style="font-family:var(--mono);font-size:0.72rem;display:none;"></span>
+            <span id="fv-edit-char-count" style="color:var(--muted);font-family:var(--mono);font-size:0.72rem;margin-left:auto;display:none;"></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       POLICY MANAGEMENT TAB
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="view" id="view-policy">
+
+    <!-- Step 1: Browse folders -->
+    <div class="pm-card">
+      <div class="pm-card-title">📂 Step 1 — เลือก Policy Folders</div>
+      <div class="pm-folder-grid">
+
+        <!-- PolicyCommon -->
+        <div class="pm-folder-card" id="pm-fc-common" onclick="document.getElementById('pm-input-common').click()">
+          <input type="file" id="pm-input-common" webkitdirectory multiple onchange="pmLoadFolder('common', this)">
+          <div class="pm-folder-icon">📘</div>
+          <div class="pm-folder-name">PolicyCommon</div>
+          <div class="pm-folder-status" id="pm-status-common">คลิกเพื่อเลือก folder</div>
+        </div>
+
+        <!-- PolicyActivity -->
+        <div class="pm-folder-card" id="pm-fc-activity" onclick="document.getElementById('pm-input-activity').click()">
+          <input type="file" id="pm-input-activity" webkitdirectory multiple onchange="pmLoadFolder('activity', this)">
+          <div class="pm-folder-icon">📙</div>
+          <div class="pm-folder-name">PolicyActivity</div>
+          <div class="pm-folder-status" id="pm-status-activity">คลิกเพื่อเลือก folder</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Step 2: Search PolicySpec -->
+    <div class="pm-card">
+      <div class="pm-card-title">🔍 Step 2 — ค้นหา Policy Spec</div>
+      <div class="pm-search-row">
+        <input class="pm-search-input" id="pm-search-input" type="text"
+          placeholder="ชื่อไฟล์ PolicySpec เช่น MySpec หรือ MySpec.json"
+          onkeydown="if(event.key==='Enter') pmDoSearch()">
+        <button class="btn btn-primary" onclick="pmDoSearch()">🔍 Search</button>
+        <button class="btn" onclick="pmClearAll()">Clear</button>
+      </div>
+      <div id="pm-search-result"></div>
+    </div>
+
+    <!-- Viewer area (breadcrumb + file content) -->
+    <div id="pm-viewer-area" style="display:none; flex-direction:column;">
+
+      <!-- Breadcrumb -->
+      <div class="pm-breadcrumb" id="pm-breadcrumb"></div>
+
+      <!-- File Info + JSON Viewer -->
+      <div class="pm-file-info" id="pm-file-info"></div>
+      <div id="pm-notice-area"></div>
+      <div class="pm-json-viewer" id="pm-json-viewer"></div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="copied-msg" id="copiedMsg">✓ Copied to clipboard</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════════════════════════ -->
+<script>
+const API = '/api';
+
+/* ─── Tab switching ─────────────────────────────────────────────── */
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('view-' + tab).classList.add('active');
+  if (tab === 'files') { fvSetSource(fvSource); }
+}
+
+/* ─── Validate tab ──────────────────────────────────────────────── */
+const $input        = document.getElementById('jsonInput');
+const $resultBox    = document.getElementById('resultBox');
+const $resultStatus = document.getElementById('resultStatus');
+const $inputStatus  = document.getElementById('inputStatus');
+const $charCount    = document.getElementById('charCount');
+const $lineCount    = document.getElementById('lineCount');
+const $copyBtn      = document.getElementById('copyBtn');
+const $minifyBtn    = document.getElementById('minifyBtn');
+
+let lastFormatted = '';
+let isMinified    = false;
+
+$input.addEventListener('input', () => {
+  const len = $input.value.length;
+  $charCount.textContent = len.toLocaleString() + ' chars';
+  if (len === 0) setInputStatus('idle', '— idle');
+});
+
+$input.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') validateJson();
+});
+
+async function validateJson() {
+  const json = $input.value.trim();
+  if (!json) { alert('กรุณา paste JSON ก่อน'); return; }
+  setInputStatus('idle', '');
+  $inputStatus.innerHTML = '<span class="spinner"></span>';
+  $resultBox.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const res  = await fetch(API + '/validate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ json })
+    });
+    const data = await res.json();
+    handleValidationResult(data, $resultBox, $resultStatus, $lineCount);
+    if (data.valid) {
+      lastFormatted = data.formattedJson; isMinified = false;
+      setInputStatus('success', '✓ valid');
+      $copyBtn.style.display = 'inline-flex';
+      $minifyBtn.style.display = 'inline-flex';
+      $minifyBtn.textContent = 'Minify';
+    } else {
+      setInputStatus('error', '✗ invalid');
+      $copyBtn.style.display = $minifyBtn.style.display = 'none';
+      $lineCount.textContent = '';
+    }
+  } catch (err) {
+    $resultBox.innerHTML = errBox('Cannot connect to server', err.message);
+    setStatus($resultStatus, 'error', '✗ Server Error');
+    setInputStatus('error', '✗ error');
+  }
+}
+
+function handleValidationResult(data, box, statusEl, lineEl) {
+  if (data.valid) {
+    box.innerHTML = syntaxHighlight(data.formattedJson);
+    setStatus(statusEl, 'success', '✓ Valid JSON');
+    if (lineEl) lineEl.textContent = data.lineCount + ' lines';
+  } else {
+    box.innerHTML = errBox(data.message, data.errorDetail);
+    setStatus(statusEl, 'error', '✗ Invalid JSON');
+    if (lineEl) lineEl.textContent = '';
+  }
+}
+
+function setInputStatus(type, text) {
+  $inputStatus.className = 'badge badge-' + (type === 'success' ? 'success' : type === 'error' ? 'error' : 'idle');
+  $inputStatus.textContent = text;
+}
+function setStatus(el, type, text) {
+  el.className = 'badge badge-' + (type === 'success' ? 'success' : type === 'error' ? 'error' : 'idle');
+  el.textContent = text;
+}
+function clearInput() {
+  $input.value = ''; lastFormatted = ''; isMinified = false;
+  $charCount.textContent = '0 chars'; $lineCount.textContent = '';
+  $resultBox.innerHTML = `<div class="empty-state"><div class="empty-icon">{}</div><div>Formatted JSON will appear here</div></div>`;
+  setInputStatus('idle', '— idle');
+  setStatus($resultStatus, 'idle', 'awaiting input');
+  $copyBtn.style.display = $minifyBtn.style.display = 'none';
+}
+function loadSample() {
+  $input.value = JSON.stringify({ application: 'JSON Tool', version: '1.0.0',
+    runtime: { springBoot: '4.0.5', java: '21', java25Ready: true, virtualThreads: true },
+    features: ['validate', 'format', 'minify', 'read files'],
+    timestamp: new Date().toISOString() }, null, 2);
+  $charCount.textContent = $input.value.length.toLocaleString() + ' chars';
+  setInputStatus('idle', '— sample loaded');
+}
+function copyResult() {
+  if (!lastFormatted) return;
+  navigator.clipboard.writeText(lastFormatted).then(showCopied);
+}
+function toggleMinify() {
+  if (!lastFormatted) return;
+  if (!isMinified) {
+    $resultBox.textContent = JSON.stringify(JSON.parse(lastFormatted));
+    $minifyBtn.textContent = 'Format'; isMinified = true;
+  } else {
+    $resultBox.innerHTML = syntaxHighlight(lastFormatted);
+    $minifyBtn.textContent = 'Minify'; isMinified = false;
+  }
+}
+
+/* ─── Files tab ─────────────────────────────────────────────────── */
+
+/* ════════════════════════════════════════════════════════════════
+   FILES TAB — fv* functions
+════════════════════════════════════════════════════════════════ */
+
+let fvSource    = 'server';   // 'server' | 'local'
+let fvAllFiles  = [];         // [{name, relPath, size, valid, error, content, formatted}]
+let fvTab       = 'all';      // 'all' | 'valid' | 'invalid'
+let fvCopyCache = '';
+
+/* ── Switch source mode ── */
+function fvSetSource(src) {
+  fvSource = src;
+  document.getElementById('fv-server-row').style.display = src === 'server' ? 'flex' : 'none';
+  document.getElementById('fv-local-row').style.display  = src === 'local'  ? 'flex' : 'none';
+  document.getElementById('fv-src-server').style.cssText = src === 'server'
+    ? 'border-color:var(--accent);color:var(--accent);' : '';
+  document.getElementById('fv-src-local').style.cssText = src === 'local'
+    ? 'border-color:var(--accent);color:var(--accent);' : '';
+  if (src === 'server') fvLoadServer();
+}
+
+/* ── Load from server API ── */
+async function fvLoadServer() {
+  fvAllFiles = [];
+  fvShowListLoading();
+  try {
+    const res  = await fetch(API + '/files');
+    const data = await res.json();
+    document.getElementById('fv-server-path').textContent = data.folderPath || '—';
+    if (!data.files || data.files.length === 0) {
+      fvShowEmpty('ไม่พบไฟล์ .json ใน server folder');
+      return;
+    }
+    // data.files already has valid/invalid info from server
+    fvAllFiles = data.files.map(f => ({
+      name:      f.fileName,
+      relPath:   f.fileName,
+      size:      f.sizeBytes,
+      valid:     f.valid,
+      error:     f.valid ? null : (f.preview || 'Invalid JSON'),
+      errorDetail: null,
+      content:   null,  // will fetch on demand
+      formatted: null,
+      source:    'server'
+    }));
+    fvRenderSummary();
+    fvRenderList();
+  } catch (err) {
+    fvShowEmpty('ไม่สามารถเชื่อมต่อ server: ' + err.message);
+  }
+}
+
+/* ── Load from local folder ── */
+/* ── Browse button — reset input so same folder can be re-selected ── */
+function fvBrowseLocal() {
+  const inp = document.getElementById('fv-local-input');
+  inp.value = '';          // clear cached value so onchange fires even for same folder
+  inp.click();
+}
+
+/* ── Clear local folder data ── */
+function fvClearLocal() {
+  fvAllFiles = [];
+  // reset input
+  const inp = document.getElementById('fv-local-input');
+  inp.value = '';
+
+  // reset status UI
+  const status = document.getElementById('fv-local-status');
+  status.textContent  = 'คลิกเพื่อเลือก Folder';
+  status.style.borderStyle = 'dashed';
+  status.style.borderColor = 'var(--border2)';
+  status.style.color  = 'var(--muted)';
+
+  document.getElementById('fv-clear-btn').style.display    = 'none';
+  document.getElementById('fv-local-progress').style.display = 'none';
+  document.getElementById('fv-summary').style.display      = 'none';
+
+  fvShowEmpty('เลือก folder เพื่อเริ่มต้น');
+}
+
+/* ── Load local folder — Promise.all (fixes async race condition) ── */
+function fvLoadLocal(input) {
+  const allFiles = Array.from(input.files).filter(f => f.name.endsWith('.json'));
+  const totalAll = input.files.length;
+
+  const statusEl   = document.getElementById('fv-local-status');
+  const progressEl = document.getElementById('fv-local-progress');
+  const barEl      = document.getElementById('fv-local-progress-bar');
+  const clearBtn   = document.getElementById('fv-clear-btn');
+
+  if (allFiles.length === 0) {
+    statusEl.textContent = `⚠ ไม่พบไฟล์ .json (พบไฟล์ทั้งหมด ${totalAll} ไฟล์)`;
+    return;
+  }
+
+  // Reset state
+  fvAllFiles = [];
+  fvCurrentFile = null;
+  fvShowListLoading();
+
+  // Reset status styling
+  statusEl.style.borderStyle  = 'dashed';
+  statusEl.style.borderColor  = 'var(--border2)';
+  statusEl.style.color        = 'var(--muted)';
+  statusEl.textContent        = `พบ ${allFiles.length} ไฟล์ JSON — กำลังโหลด…`;
+  progressEl.style.display    = 'block';
+  barEl.style.width           = '0%';
+  clearBtn.style.display      = 'none';
+
+  const folderName = allFiles[0].webkitRelativePath
+    ? allFiles[0].webkitRelativePath.split('/')[0]
+    : 'Local Folder';
+
+  let doneCount = 0;
+
+  // Use Promise.all — each file gets its own Promise, resolved when FileReader finishes
+  const promises = allFiles.map((file, idx) => new Promise(resolve => {
+    const parts   = file.webkitRelativePath ? file.webkitRelativePath.split('/') : [file.name];
+    const relPath = parts.length > 1 ? parts.slice(1).join('/') : file.name;
+
+    const reader = new FileReader();
+
+    reader.onload = e => {
+      const raw = e.target.result;
+      let valid = true, error = null, errorDetail = null, formatted = null;
+      try {
+        const parsed = JSON.parse(raw);
+        formatted = JSON.stringify(parsed, null, 2);
+      } catch (ex) {
+        valid       = false;
+        error       = ex.message;
+        errorDetail = fvParseJsonError(ex.message, raw);
+      }
+
+      doneCount++;
+      const pct = Math.round((doneCount / allFiles.length) * 100);
+      barEl.style.width    = pct + '%';
+      statusEl.textContent = `กำลังโหลด ${doneCount} / ${allFiles.length}…`;
+
+      resolve({
+        name: file.name, relPath, size: file.size,
+        valid, error, errorDetail, content: raw, formatted, source: 'local'
+      });
+    };
+
+    reader.onerror = () => {
+      doneCount++;
+      barEl.style.width = Math.round((doneCount / allFiles.length) * 100) + '%';
+      resolve({
+        name: file.name, relPath, size: file.size,
+        valid: false, error: 'ไม่สามารถอ่านไฟล์ได้',
+        errorDetail: null, content: null, formatted: null, source: 'local'
+      });
+    };
+
+    reader.readAsText(file);
+  }));
+
+  // Wait for ALL files to finish before rendering
+  Promise.all(promises).then(results => {
+    fvAllFiles = results;
+
+    // Update status
+    const validCount   = results.filter(r => r.valid).length;
+    const invalidCount = results.length - validCount;
+
+    statusEl.textContent  = `✓ "${folderName}" — ${results.length} ไฟล์ (Valid: ${validCount}, Invalid: ${invalidCount})`;
+    statusEl.style.borderStyle = 'solid';
+    statusEl.style.borderColor = invalidCount > 0 ? 'var(--amber)' : 'var(--green)';
+    statusEl.style.color       = invalidCount > 0 ? 'var(--amber)' : 'var(--green)';
+    barEl.style.width          = '100%';
+    clearBtn.style.display     = 'inline-flex';
+
+    setTimeout(() => { progressEl.style.display = 'none'; }, 600);
+
+    fvRenderSummary();
+    fvRenderList();
+  });
+}
+
+/* ── Parse JSON error for line/column info ── */
+function fvParseJsonError(msg, raw) {
+  // Try to extract position from native error message
+  // e.g. "Unexpected token x at position 42"
+  const posMatch = msg.match(/position (\d+)/i);
+  if (posMatch) {
+    const pos = parseInt(posMatch[1]);
+    const lines = raw.substring(0, pos).split('\n');
+    const line  = lines.length;
+    const col   = lines[lines.length - 1].length + 1;
+    // Get surrounding context
+    const allLines = raw.split('\n');
+    const ctx = allLines.slice(Math.max(0, line - 2), line + 1)
+      .map((l, i) => `${String(line - 1 + i - Math.max(0, line - 2)).padStart(4)} │ ${l}`)
+      .join('\n');
+    return { line, col, context: ctx };
+  }
+  // Try "line N column N" pattern
+  const lcMatch = msg.match(/line (\d+).*column (\d+)/i);
+  if (lcMatch) {
+    const line = parseInt(lcMatch[1]), col = parseInt(lcMatch[2]);
+    const allLines = (raw || '').split('\n');
+    const ctx = allLines.slice(Math.max(0, line - 2), line + 1)
+      .map((l, i) => `${String(line - 1 + i - Math.max(0, line - 2)).padStart(4)} │ ${l}`)
+      .join('\n');
+    return { line, col, context: ctx };
+  }
+  return null;
+}
+
+/* ── Summary bar ── */
+function fvRenderSummary() {
+  const total   = fvAllFiles.length;
+  const valid   = fvAllFiles.filter(f => f.valid).length;
+  const invalid = total - valid;
+  document.getElementById('fvs-total').textContent   = total;
+  document.getElementById('fvs-valid').textContent   = valid;
+  document.getElementById('fvs-invalid').textContent = invalid;
+  document.getElementById('fv-summary').style.display = 'flex';
+}
+
+/* ── Tab switch ── */
+function fvSetTab(tab) {
+  fvTab = tab;
+  ['all','valid','invalid'].forEach(t => {
+    const btn = document.getElementById('fv-tab-' + t);
+    btn.style.cssText = t === tab ? 'font-size:0.72rem;border-color:var(--accent);color:var(--accent);' : 'font-size:0.72rem;';
+  });
+  fvRenderList();
+}
+
+/* ── Filter ── */
+function fvApplyFilter() { fvRenderList(); }
+
+/* ── Render file list ── */
+function fvRenderList() {
+  const filterText = (document.getElementById('fv-filter-input').value || '').toLowerCase();
+  let files = fvAllFiles.filter(f => {
+    if (fvTab === 'valid'   && !f.valid) return false;
+    if (fvTab === 'invalid' && f.valid)  return false;
+    if (filterText && !f.name.toLowerCase().includes(filterText)) return false;
+    return true;
+  });
+
+  if (files.length === 0) {
+    fvShowEmpty('ไม่พบไฟล์ที่ตรงกับเงื่อนไข');
+    return;
+  }
+
+  const validFiles   = files.filter(f => f.valid);
+  const invalidFiles = files.filter(f => !f.valid);
+  let html = '';
+
+  // ── Invalid section (shown first, prominent) ──
+  if (invalidFiles.length > 0) {
+    html += `<div style="margin-bottom:1rem;">
+      <div style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--red);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:0.6rem;">
+        ❌ Invalid JSON — ${invalidFiles.length} ไฟล์
+      </div>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;">
+        ${invalidFiles.map(f => fvInvalidCard(f)).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ── Valid section ──
+  if (validFiles.length > 0 && fvTab !== 'invalid') {
+    html += `<div>
+      <div style="font-family:var(--mono);font-size:0.72rem;font-weight:600;color:var(--green);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:0.6rem;">
+        ✅ Valid JSON — ${validFiles.length} ไฟล์
+      </div>
+      <div class="file-grid">${validFiles.map(f => fvValidCard(f)).join('')}</div>
+    </div>`;
+  }
+
+  document.getElementById('fv-list-area').innerHTML = html;
+  document.getElementById('fv-detail').style.display = 'none';
+}
+
+function fvValidCard(f) {
+  const size = fmtSize(f.size || 0);
+  const preview = f.formatted ? f.formatted.substring(0, 100).replace(/\n/g, ' ') : '';
+  return `<div class="file-card" onclick="fvOpenFile('${escAttr(f.relPath)}')">
+    <div class="file-card-header">
+      <div class="file-name">📄 ${esc(f.name)}</div>
+      <span class="badge badge-success">✓ valid</span>
+    </div>
+    <div class="file-meta"><span>${size}</span>${f.relPath !== f.name ? `<span style="color:var(--muted);font-size:0.65rem;">${esc(f.relPath)}</span>` : ''}</div>
+    <div class="file-preview">${esc(preview)}</div>
+  </div>`;
+}
+
+function fvInvalidCard(f) {
+  const errDetail = f.errorDetail;
+  return `<div style="background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.3);border-radius:8px;padding:0.85rem 1rem;cursor:pointer;" onclick="fvOpenFile('${escAttr(f.relPath)}')">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;margin-bottom:0.4rem;">
+      <div style="font-family:var(--mono);font-size:0.82rem;font-weight:500;color:var(--text);">📄 ${esc(f.name)}</div>
+      <span class="badge badge-error">✗ invalid</span>
+    </div>
+    ${f.relPath !== f.name ? `<div style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);margin-bottom:0.35rem;">${esc(f.relPath)}</div>` : ''}
+    <div style="font-family:var(--mono);font-size:0.73rem;color:var(--red);margin-bottom:${errDetail ? '0.4rem' : '0'};">${esc(f.error || 'Invalid JSON')}</div>
+    ${errDetail ? `<div style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);">บรรทัดที่ ${errDetail.line}, คอลัมน์ที่ ${errDetail.col}</div>` : ''}
+    ${errDetail && errDetail.context ? `<pre style="margin-top:0.5rem;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:0.5rem 0.75rem;font-family:var(--mono);font-size:0.68rem;color:var(--text);overflow-x:auto;white-space:pre;">${esc(errDetail.context)}</pre>` : ''}
+  </div>`;
+}
+
+/* ── Open file detail ── */
+// ── current open file state ──
+let fvCurrentFile  = null;   // file object being viewed
+let fvEditMode     = false;  // true = edit mode active
+let fvEditValid    = false;  // last validate result in edit mode
+
+async function fvOpenFile(relPath) {
+  const f = fvAllFiles.find(x => x.relPath === relPath);
+  if (!f) return;
+
+  fvCurrentFile = f;
+  fvEditMode    = false;
+  fvEditValid   = false;
+
+  document.getElementById('fv-list-area').style.display = 'none';
+  document.getElementById('fv-summary').style.display   = 'none';
+  const detail = document.getElementById('fv-detail');
+  detail.style.display = 'flex';
+
+  fvResetDetailUI(f);
+
+  if (f.source === 'local') {
+    fvRenderLocalFile(f);
+  } else {
+    await fvRenderServerFile(f);
+  }
+}
+
+function fvResetDetailUI(f) {
+  document.getElementById('fv-detail-name').textContent = f.name;
+
+  // badge
+  const badge = document.getElementById('fv-detail-badge');
+  badge.className  = 'badge ' + (f.valid ? 'badge-success' : 'badge-error');
+  badge.textContent = f.valid ? '✓ valid' : '✗ invalid';
+
+  // hide all action buttons first
+  ['fv-edit-btn','fv-cancel-btn','fv-validate-edit-btn','fv-save-btn','fv-copy-btn'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+
+  // show/hide view vs edit area
+  document.getElementById('fv-detail-box').style.display  = '';
+  document.getElementById('fv-edit-area').style.display   = 'none';
+  document.getElementById('fv-edit-status').style.display     = 'none';
+  document.getElementById('fv-edit-char-count').style.display = 'none';
+
+  // clear
+  document.getElementById('fv-detail-notice').innerHTML = '';
+  document.getElementById('fv-detail-box').innerHTML    = '';
+  document.getElementById('fv-detail-info').textContent = '';
+  fvCopyCache = '';
+}
+
+/* ── Render local file (view mode) ── */
+function fvRenderLocalFile(f) {
+  const noticeEl = document.getElementById('fv-detail-notice');
+  const box      = document.getElementById('fv-detail-box');
+  const infoEl   = document.getElementById('fv-detail-info');
+
+  if (f.valid && f.formatted) {
+    noticeEl.innerHTML = '';
+    box.innerHTML = syntaxHighlight(f.formatted);
+    const lines = f.formatted.split('\n').length;
+    infoEl.textContent = `${lines} lines · ${fmtSize(f.size)}`;
+    fvCopyCache = f.formatted;
+    // show Edit + Copy
+    document.getElementById('fv-edit-btn').style.display  = 'inline-flex';
+    document.getElementById('fv-copy-btn').style.display  = 'inline-flex';
+  } else {
+    // invalid — show error detail + raw, allow edit to fix
+    const errDetail = f.errorDetail;
+    let notice = `<div class="pm-alert pm-alert-error" style="margin-bottom:0;">
+      ❌ ${esc(f.error || 'Invalid JSON')}`;
+    if (errDetail) notice += ` — <strong>บรรทัดที่ ${errDetail.line}, คอลัมน์ที่ ${errDetail.col}</strong>`;
+    notice += `</div>`;
+    if (errDetail && errDetail.context) {
+      notice += `<pre style="margin:0.5rem 1rem 0;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:0.6rem 0.85rem;font-family:var(--mono);font-size:0.72rem;color:var(--text);overflow-x:auto;white-space:pre;">${esc(errDetail.context)}</pre>`;
+    }
+    noticeEl.innerHTML = notice;
+    box.innerHTML = `<div style="padding:0.5rem 0 0.25rem;font-family:var(--mono);font-size:0.74rem;color:var(--muted);">Raw content:</div>` +
+      `<div style="white-space:pre-wrap;word-break:break-all;font-family:var(--mono);font-size:0.78rem;color:var(--text);">${esc(f.content || '')}</div>`;
+    infoEl.textContent = fmtSize(f.size);
+    // allow edit to fix invalid JSON
+    document.getElementById('fv-edit-btn').style.display = 'inline-flex';
+  }
+}
+
+/* ── Render server file (view mode) ── */
+async function fvRenderServerFile(f) {
+  const noticeEl = document.getElementById('fv-detail-notice');
+  const box      = document.getElementById('fv-detail-box');
+  const infoEl   = document.getElementById('fv-detail-info');
+
+  box.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const res  = await fetch(`${API}/files/${encodeURIComponent(f.name)}`);
+    const data = await res.json();
+    if (data.valid) {
+      box.innerHTML = syntaxHighlight(data.formattedJson);
+      infoEl.textContent = `${data.lineCount} lines`;
+      fvCopyCache = data.formattedJson;
+      document.getElementById('fv-copy-btn').style.display = 'inline-flex';
+      // Server files: show Edit (will save as download since no write-back API)
+      document.getElementById('fv-edit-btn').style.display = 'inline-flex';
+    } else {
+      noticeEl.innerHTML = `<div class="pm-alert pm-alert-error" style="margin-bottom:0;">❌ ${esc(data.message)}${data.errorDetail ? ' — ' + esc(data.errorDetail) : ''}</div>`;
+      document.getElementById('fv-edit-btn').style.display = 'inline-flex';
+      // store raw for edit
+      fvCurrentFile = { ...f, content: data.errorDetail || '', formatted: null };
+    }
+  } catch (err) {
+    box.innerHTML = errBox('Error fetching file', err.message);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   EDIT MODE
+════════════════════════════════════════════════════════════════ */
+
+function fvEnterEdit() {
+  fvEditMode  = true;
+  fvEditValid = false;
+  const f = fvCurrentFile;
+
+  // populate textarea with current content
+  const rawContent = f.formatted || f.content || '';
+  const textarea   = document.getElementById('fv-edit-area');
+  textarea.value   = rawContent;
+
+  // swap view → edit
+  document.getElementById('fv-detail-box').style.display = 'none';
+  textarea.style.display = 'block';
+
+  // buttons
+  document.getElementById('fv-edit-btn').style.display          = 'none';
+  document.getElementById('fv-copy-btn').style.display          = 'none';
+  document.getElementById('fv-cancel-btn').style.display        = 'inline-flex';
+  document.getElementById('fv-validate-edit-btn').style.display = 'inline-flex';
+  document.getElementById('fv-save-btn').style.display          = 'none'; // shown after validate
+
+  // status bar
+  document.getElementById('fv-edit-status').style.display     = 'inline';
+  document.getElementById('fv-edit-char-count').style.display = 'inline';
+  fvUpdateEditStatus('idle');
+  fvUpdateCharCount(textarea.value);
+
+  textarea.focus();
+}
+
+function fvCancelEdit() {
+  fvEditMode  = false;
+  fvEditValid = false;
+
+  // swap back
+  document.getElementById('fv-edit-area').style.display  = 'none';
+  document.getElementById('fv-detail-box').style.display = '';
+
+  // hide edit buttons
+  ['fv-cancel-btn','fv-validate-edit-btn','fv-save-btn'].forEach(id =>
+    document.getElementById(id).style.display = 'none');
+  document.getElementById('fv-edit-status').style.display     = 'none';
+  document.getElementById('fv-edit-char-count').style.display = 'none';
+
+  // re-render file
+  document.getElementById('fv-detail-notice').innerHTML = '';
+  if (fvCurrentFile.source === 'local') {
+    fvRenderLocalFile(fvCurrentFile);
+  } else {
+    fvRenderServerFile(fvCurrentFile);
+  }
+}
+
+function fvOnEditInput() {
+  const ta = document.getElementById('fv-edit-area');
+  fvUpdateCharCount(ta.value);
+  // reset validate state when user types
+  if (fvEditValid) {
+    fvEditValid = false;
+    document.getElementById('fv-save-btn').style.display = 'none';
+    fvUpdateEditStatus('idle');
+  }
+}
+
+function fvUpdateCharCount(text) {
+  const lines = text.split('\n').length;
+  document.getElementById('fv-edit-char-count').textContent =
+    `${lines} lines · ${text.length.toLocaleString()} chars`;
+}
+
+function fvUpdateEditStatus(state, msg) {
+  const el = document.getElementById('fv-edit-status');
+  if (state === 'idle') {
+    el.style.color = 'var(--muted)';
+    el.textContent = '— กด Validate ก่อน Save';
+  } else if (state === 'valid') {
+    el.style.color = 'var(--green)';
+    el.textContent = '✓ JSON ถูกต้อง — พร้อม Save';
+  } else if (state === 'invalid') {
+    el.style.color = 'var(--red)';
+    el.textContent = '✗ ' + (msg || 'JSON ไม่ถูกต้อง');
+  }
+}
+
+/* ── Validate in edit mode ── */
+function fvValidateEdit() {
+  const raw = document.getElementById('fv-edit-area').value;
+  const noticeEl = document.getElementById('fv-detail-notice');
+  try {
+    const parsed   = JSON.parse(raw);
+    const pretty   = JSON.stringify(parsed, null, 2);
+    // auto-format
+    document.getElementById('fv-edit-area').value = pretty;
+    fvUpdateCharCount(pretty);
+
+    fvEditValid = true;
+    fvCopyCache = pretty;
+    document.getElementById('fv-save-btn').style.display = 'inline-flex';
+    fvUpdateEditStatus('valid');
+    noticeEl.innerHTML = `<div class="pm-alert pm-alert-success" style="margin-bottom:0;">✅ JSON ถูกต้อง และ Format เรียบร้อยแล้ว — กด 💾 Save เพื่อดาวน์โหลด</div>`;
+  } catch (ex) {
+    fvEditValid = false;
+    document.getElementById('fv-save-btn').style.display = 'none';
+
+    const errDetail = fvParseJsonError(ex.message, raw);
+    fvUpdateEditStatus('invalid', ex.message);
+
+    let notice = `<div class="pm-alert pm-alert-error" style="margin-bottom:0;">❌ ${esc(ex.message)}`;
+    if (errDetail) {
+      notice += ` — <strong>บรรทัดที่ ${errDetail.line}, คอลัมน์ที่ ${errDetail.col}</strong>`;
+      // highlight error line in textarea
+      fvHighlightErrorLine(errDetail.line);
+    }
+    notice += `</div>`;
+    if (errDetail && errDetail.context) {
+      notice += `<pre style="margin:0.4rem 1rem 0;background:var(--surface2);border:1px solid rgba(248,113,113,0.3);border-radius:5px;padding:0.5rem 0.75rem;font-family:var(--mono);font-size:0.71rem;color:var(--text);overflow-x:auto;white-space:pre;">${esc(errDetail.context)}</pre>`;
+    }
+    noticeEl.innerHTML = notice;
+  }
+}
+
+/* ── Highlight error line in textarea ── */
+function fvHighlightErrorLine(lineNum) {
+  const ta    = document.getElementById('fv-edit-area');
+  const lines = ta.value.split('\n');
+  let pos = 0;
+  for (let i = 0; i < Math.min(lineNum - 1, lines.length); i++) {
+    pos += lines[i].length + 1;
+  }
+  const endPos = pos + (lines[lineNum - 1] || '').length;
+  ta.focus();
+  ta.setSelectionRange(pos, endPos);
+  ta.scrollTop = (lineNum / lines.length) * ta.scrollHeight - ta.clientHeight / 2;
+}
+
+/* ── Save (download) ── */
+function fvSaveFile() {
+  if (!fvEditValid || !fvCopyCache) {
+    pmShowToast('⚠ กรุณา Validate ก่อน Save', true);
+    return;
+  }
+  const fname    = fvCurrentFile ? fvCurrentFile.name : 'output.json';
+  const blob     = new Blob([fvCopyCache], { type: 'application/json' });
+  const url      = URL.createObjectURL(blob);
+  const a        = document.createElement('a');
+  a.href         = url;
+  a.download     = fname;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // update in-memory file record (local source)
+  if (fvCurrentFile && fvCurrentFile.source === 'local') {
+    fvCurrentFile.formatted = fvCopyCache;
+    fvCurrentFile.content   = fvCopyCache;
+    fvCurrentFile.valid     = true;
+    fvCurrentFile.error     = null;
+    fvCurrentFile.errorDetail = null;
+
+    // update fvAllFiles array too
+    const idx = fvAllFiles.findIndex(x => x.relPath === fvCurrentFile.relPath);
+    if (idx !== -1) fvAllFiles[idx] = { ...fvCurrentFile };
+    fvRenderSummary();
+  }
+
+  pmShowToast(`✓ บันทึกไฟล์ "${fname}" แล้ว`, false);
+
+  // exit edit mode → show updated view
+  fvEditMode  = false;
+  fvEditValid = false;
+  document.getElementById('fv-edit-area').style.display  = 'none';
+  document.getElementById('fv-detail-box').style.display = '';
+  ['fv-cancel-btn','fv-validate-edit-btn','fv-save-btn'].forEach(id =>
+    document.getElementById(id).style.display = 'none');
+  document.getElementById('fv-edit-status').style.display     = 'none';
+  document.getElementById('fv-edit-char-count').style.display = 'none';
+  document.getElementById('fv-detail-notice').innerHTML = '';
+
+  // re-render as valid
+  const badge = document.getElementById('fv-detail-badge');
+  badge.className   = 'badge badge-success';
+  badge.textContent = '✓ valid';
+  document.getElementById('fv-detail-box').innerHTML = syntaxHighlight(fvCopyCache);
+  const lines = fvCopyCache.split('\n').length;
+  document.getElementById('fv-detail-info').textContent = `${lines} lines`;
+  document.getElementById('fv-edit-btn').style.display  = 'inline-flex';
+  document.getElementById('fv-copy-btn').style.display  = 'inline-flex';
+}
+
+function fvCopyContent() {
+  if (!fvCopyCache) return;
+  navigator.clipboard.writeText(fvCopyCache).then(showCopied);
+}
+
+function fvCloseDetail() {
+  // exit edit mode if active
+  fvEditMode  = false;
+  fvEditValid = false;
+  document.getElementById('fv-detail').style.display     = 'none';
+  document.getElementById('fv-list-area').style.display  = '';
+  document.getElementById('fv-summary').style.display    = 'flex';
+}
+
+function fvShowListLoading() {
+  document.getElementById('fv-list-area').innerHTML =
+    '<div class="empty-state"><div class="spinner"></div><div>กำลังโหลดและ validate…</div></div>';
+  document.getElementById('fv-detail').style.display = 'none';
+  document.getElementById('fv-summary').style.display = 'none';
+}
+
+function fvShowEmpty(msg) {
+  document.getElementById('fv-list-area').innerHTML =
+    `<div class="empty-state"><div class="empty-icon">📭</div><div>${esc(msg)}</div></div>`;
+  document.getElementById('fv-summary').style.display = 'none';
+}
+
+// keep old loadFiles() alias for init call compatibility
+async function loadFiles() { if (fvSource === 'server') await fvLoadServer(); }
+
+/* ════════════════════════════════════════════════════════════════
+   POLICY MANAGEMENT — STATE & LOGIC
+════════════════════════════════════════════════════════════════ */
+
+// Store: source → { normalizedRelPath → { name, content, parsed } }
+const pmFolders = { common: {}, activity: {} };
+const pmReady   = { common: false, activity: false }; // true เมื่อโหลดเสร็จครบ
+const pmBreadcrumb = []; // { label, type, source, fileKey }
+
+/* ─── Load folder from file input (Promise-based, wait for all FileReaders) ─── */
+function pmLoadFolder(source, input) {
+  const allFiles = Array.from(input.files);
+  const jsonFiles = allFiles.filter(f => f.name.endsWith('.json'));
+
+  // Reset state
+  pmFolders[source] = {};
+  pmReady[source]   = false;
+
+  const card   = document.getElementById('pm-fc-' + source);
+  const status = document.getElementById('pm-status-' + source);
+  card.classList.remove('loaded');
+  status.className = 'pm-folder-status';
+
+  if (jsonFiles.length === 0) {
+    status.textContent = '⚠ ไม่พบไฟล์ .json ใน folder นี้';
+    pmReady[source] = true;
+    return;
+  }
+
+  status.textContent = `กำลังโหลด 0 / ${jsonFiles.length}…`;
+
+  // Read all files as promises
+  let loadedCount = 0;
+  const promises = jsonFiles.map(file => new Promise(resolve => {
+    // webkitRelativePath: "PolicyCommon/CFS/Policy/Spec/foo.json"
+    // slice(1) → remove the top-level folder name user selected
+    const parts = file.webkitRelativePath.split('/');
+    const rel   = parts.slice(1).join('/');
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      let parsed = null;
+      try { parsed = JSON.parse(e.target.result); } catch (_) {}
+      pmFolders[source][rel] = { name: file.name, relPath: rel, content: e.target.result, parsed };
+      loadedCount++;
+      status.textContent = `กำลังโหลด ${loadedCount} / ${jsonFiles.length}…`;
+      resolve();
+    };
+    reader.onerror = () => resolve(); // skip unreadable files
+    reader.readAsText(file);
+  }));
+
+  Promise.all(promises).then(() => {
+    pmReady[source] = true;
+    card.classList.add('loaded');
+    status.textContent = `✓ ${jsonFiles.length} ไฟล์ JSON โหลดแล้ว (จาก ${allFiles.length} ไฟล์ทั้งหมด)`;
+    status.className = 'pm-folder-status ok';
+
+    // Debug: log all keys so user can see what was indexed
+    console.log(`[PM] ${source} folder keys (${Object.keys(pmFolders[source]).length}):`,
+      Object.keys(pmFolders[source]));
+  });
+}
+
+/* ─── Normalize path: backslash→slash, lowercase ─── */
+function pmNorm(p) { return p.replace(/\\/g, '/').toLowerCase(); }
+
+/* ─── Find file — 3 strategies in order ───────────────────────────
+   1. Exact relative path match (case-insensitive)
+   2. Path ends-with match  (e.g. store has "extra/CFS/Policy/Spec/foo.json")
+   3. Filename-only match in a path containing the type keyword
+─────────────────────────────────────────────────────────────────── */
+function pmFindFile(source, candidatePaths, typeHint) {
+  const store   = pmFolders[source];
+  const storeKeys = Object.keys(store);
+
+  // Strategy 1: exact match
+  for (const cand of candidatePaths) {
+    const normCand = pmNorm(cand);
+    for (const key of storeKeys) {
+      if (pmNorm(key) === normCand) {
+        return { key, ...store[key] };
+      }
+    }
+  }
+
+  // Strategy 2: ends-with match
+  for (const cand of candidatePaths) {
+    const normCand = pmNorm(cand);
+    for (const key of storeKeys) {
+      if (pmNorm(key).endsWith('/' + normCand) || pmNorm(key).endsWith(normCand)) {
+        return { key, ...store[key] };
+      }
+    }
+  }
+
+  // Strategy 3: filename match with optional type hint in path
+  const targetName = pmNorm(candidatePaths[0].split('/').pop()); // e.g. "foo.json"
+  const typeNorm   = typeHint ? typeHint.toLowerCase() : '';
+  for (const key of storeKeys) {
+    const normKey = pmNorm(key);
+    const normBasename = normKey.split('/').pop();
+    if (normBasename === targetName) {
+      // prefer keys that contain the type in path (e.g. /spec/, /set/)
+      if (!typeNorm || normKey.includes('/' + typeNorm + '/') || normKey.includes('\\' + typeNorm + '\\')) {
+        return { key, ...store[key] };
+      }
+    }
+  }
+  // Strategy 3b: filename match without type constraint (last resort)
+  for (const key of storeKeys) {
+    const normBasename = pmNorm(key).split('/').pop();
+    if (normBasename === targetName) {
+      return { key, ...store[key] };
+    }
+  }
+
+  return null;
+}
+
+/* ─── Build candidate paths for a given policy type ─── */
+function pmCandidates(type, fileName) {
+  const fname = fileName.endsWith('.json') ? fileName : fileName + '.json';
+  const subFolders = ['CFS', 'RFS'];
+  const paths = [];
+  // With subfolder
+  subFolders.forEach(sf => {
+    paths.push(`${sf}/Policy/${type}/${fname}`);
+    paths.push(`${sf}/Policy/${type.toLowerCase()}/${fname}`);
+  });
+  // Without subfolder
+  paths.push(`Policy/${type}/${fname}`);
+  paths.push(`Policy/${type.toLowerCase()}/${fname}`);
+  // Just filename
+  paths.push(fname);
+  return paths;
+}
+
+/* ─── Search Policy Spec ─── */
+function pmDoSearch() {
+  const raw = document.getElementById('pm-search-input').value.trim();
+  if (!raw) return;
+  const fname    = raw.endsWith('.json') ? raw : raw + '.json';
+  const resultEl = document.getElementById('pm-search-result');
+
+  // Check if any folder is loaded
+  const commonCount  = Object.keys(pmFolders.common).length;
+  const activityCount = Object.keys(pmFolders.activity).length;
+  if (commonCount === 0 && activityCount === 0) {
+    resultEl.innerHTML = `<div class="pm-alert pm-alert-error">⚠ กรุณา browse folder PolicyCommon หรือ PolicyActivity ก่อน</div>`;
+    return;
+  }
+  if (!pmReady.common && !pmReady.activity) {
+    resultEl.innerHTML = `<div class="pm-alert pm-alert-info"><span class="spinner"></span> ยังโหลดไฟล์ไม่เสร็จ กรุณารอสักครู่…</div>`;
+    return;
+  }
+
+  resultEl.innerHTML = `<div class="pm-alert pm-alert-info"><span class="spinner"></span> กำลังค้นหา "${esc(fname)}"…</div>`;
+
+  // Small delay to ensure UI updates, then search
+  setTimeout(() => {
+    let found = null, foundSource = null;
+    for (const src of ['common', 'activity']) {
+      const res = pmFindFile(src, pmCandidates('Spec', fname), 'Spec');
+      if (res) { found = res; foundSource = src; break; }
+    }
+
+    if (!found) {
+      // Show debug info: list all keys containing the filename
+      const fname_norm = pmNorm(fname);
+      const hints = [];
+      for (const src of ['common', 'activity']) {
+        Object.keys(pmFolders[src]).forEach(k => {
+          if (pmNorm(k).includes(fname_norm.replace('.json', ''))) hints.push(`[${src}] ${k}`);
+        });
+      }
+      const hintHtml = hints.length > 0
+        ? `<br><small style="color:var(--muted)">พบไฟล์ที่คล้ายกัน: ${hints.map(h => esc(h)).join(', ')}</small>`
+        : `<br><small style="color:var(--muted)">Common: ${commonCount} ไฟล์ | Activity: ${activityCount} ไฟล์ที่โหลดไว้</small>`;
+
+      resultEl.innerHTML = `<div class="pm-alert pm-alert-error">❌ ไม่พบไฟล์ "${esc(fname)}"${hintHtml}</div>`;
+      return;
+    }
+
+    const srcLabel = foundSource === 'common' ? 'PolicyCommon' : 'PolicyActivity';
+    const badgeCls = foundSource === 'common' ? 'badge-common' : 'badge-activity';
+    resultEl.innerHTML = `<div class="pm-alert pm-alert-success">
+      ✅ พบไฟล์ <strong>${esc(found.name)}</strong> &nbsp;
+      <span class="badge ${badgeCls}">${srcLabel}</span> &nbsp;
+      <span style="color:var(--muted);font-size:0.7rem;">${esc(found.key)}</span>
+    </div>`;
+
+    pmBreadcrumb.length = 0;
+    pmBreadcrumb.push({ label: found.name, type: 'Spec', source: foundSource, fileKey: found.key });
+    pmRenderViewer('Spec', found, foundSource);
+  }, 50);
+}
+
+function pmClearAll() {
+  document.getElementById('pm-search-input').value = '';
+  document.getElementById('pm-search-result').innerHTML = '';
+  document.getElementById('pm-viewer-area').style.display = 'none';
+  pmBreadcrumb.length = 0;
+}
+
+/* ─── Main viewer renderer ─── */
+function pmRenderViewer(type, fileObj, source) {
+  const area = document.getElementById('pm-viewer-area');
+  area.style.display = 'flex';
+
+  // Breadcrumb
+  pmRenderBreadcrumb();
+
+  // File info
+  const srcLabel = source === 'common' ? 'PolicyCommon' : 'PolicyActivity';
+  const badgeCls = source === 'common' ? 'badge-common' : 'badge-activity';
+  document.getElementById('pm-file-info').innerHTML = `
+    <span class="pm-file-fname">📄 ${esc(fileObj.name)}</span>
+    <span class="pm-file-path">${esc(fileObj.key)}</span>
+    <span class="badge ${badgeCls}">${srcLabel}</span>
+    <span class="badge badge-idle" style="text-transform:uppercase;">${type}</span>
+  `;
+
+  const noticeArea = document.getElementById('pm-notice-area');
+  const viewer = document.getElementById('pm-json-viewer');
+
+  if (!fileObj.parsed) {
+    noticeArea.innerHTML = `<div class="pm-alert pm-alert-error">⚠ ไม่สามารถ parse JSON ได้</div>`;
+    viewer.textContent = fileObj.content || '';
+    return;
+  }
+
+  // Render by type
+  let html = '', notice = '';
+  if (type === 'Spec') {
+    const ids = pmCollect(fileObj.parsed, 'policySetId');
+    if (ids.length > 0) {
+      notice = `<div class="pm-alert pm-alert-info">🔗 พบ <strong>policySetId</strong> ${ids.length} รายการ — คลิกค่าสีเขียวเพื่อเปิด PolicySet file</div>`;
+    }
+    html = pmRenderJson(fileObj.parsed, (key, val) => {
+      if (key === 'policySetId' && typeof val === 'string') {
+        return `<span class="json-link" onclick="pmOpenLinked('Set','${escAttr(val)}','${escAttr(source)}')">${esc(val)}</span>`;
+      }
+      return null;
+    });
+
+  } else if (type === 'Set') {
+    const ids = pmCollectInParent(fileObj.parsed, 'policyGroup', 'id');
+    if (ids.length > 0) {
+      notice = `<div class="pm-alert pm-alert-info">🔗 พบ <strong>policyGroup.id</strong> ${ids.length} รายการ — คลิกค่าสีเขียวเพื่อเปิด PolicyGroup file</div>`;
+    }
+    html = pmRenderJson(fileObj.parsed, (key, val, parentKey) => {
+      if (key === 'id' && parentKey === 'policyGroup' && typeof val === 'string') {
+        return `<span class="json-link" onclick="pmOpenLinked('Group','${escAttr(val)}','${escAttr(source)}')">${esc(val)}</span>`;
+      }
+      return null;
+    });
+
+  } else if (type === 'Group') {
+    const ids = pmCollectInParent(fileObj.parsed, 'policyRule', 'id');
+    if (ids.length > 0) {
+      notice = `<div class="pm-alert pm-alert-info">🔗 พบ <strong>policyRule.id</strong> ${ids.length} รายการ — คลิกค่าสีเขียวเพื่อเปิด PolicyRule file</div>`;
+    }
+    html = pmRenderJson(fileObj.parsed, (key, val, parentKey) => {
+      if (key === 'id' && parentKey === 'policyRule' && typeof val === 'string') {
+        return `<span class="json-link" onclick="pmOpenLinked('Rule','${escAttr(val)}','${escAttr(source)}')">${esc(val)}</span>`;
+      }
+      return null;
+    });
+
+  } else {
+    // Rule — plain pretty view
+    html = pmRenderJson(fileObj.parsed, () => null);
+  }
+
+  noticeArea.innerHTML = notice;
+  viewer.innerHTML = html;
+
+  // Scroll viewer into view
+  area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ─── Open linked file (Set / Group / Rule) ─── */
+function pmOpenLinked(type, id, preferSource) {
+  const fname      = id.endsWith('.json') ? id : id + '.json';
+  const candidates = pmCandidates(type, fname);
+
+  // Search preferred source first (Common → Activity for Set/Group/Rule)
+  const searchOrder = ['common', 'activity'];
+
+  let found = null, foundSource = null;
+  for (const src of searchOrder) {
+    const res = pmFindFile(src, candidates, type);
+    if (res) { found = res; foundSource = src; break; }
+  }
+
+  if (!found) {
+    pmShowToast(`❌ ไม่พบไฟล์ Policy${type}: "${fname}"`, true);
+    return;
+  }
+
+  pmBreadcrumb.push({ label: found.name, type, source: foundSource, fileKey: found.key });
+  pmRenderViewer(type, found, foundSource);
+}
+
+/* ─── Breadcrumb ─── */
+function pmRenderBreadcrumb() {
+  const el = document.getElementById('pm-breadcrumb');
+  let html = '';
+  pmBreadcrumb.forEach((item, i) => {
+    if (i > 0) html += `<span class="pm-bc-sep">›</span>`;
+    if (i === pmBreadcrumb.length - 1) {
+      html += `<span class="pm-bc-current">${esc(item.label)}</span>`;
+    } else {
+      html += `<span class="pm-bc-item" onclick="pmBcNav(${i})">${esc(item.label)}</span>`;
+    }
+  });
+  el.innerHTML = html;
+}
+
+function pmBcNav(idx) {
+  pmBreadcrumb.splice(idx + 1);
+  const item = pmBreadcrumb[idx];
+  const fileObj = pmFolders[item.source][item.fileKey];
+  if (fileObj) pmRenderViewer(item.type, { ...fileObj, key: item.fileKey }, item.source);
+}
+
+/* ─── JSON Renderer with clickable resolver ───────────────────────
+   resolver(currentKey, value, parentObjectKey) → html string | null
+   
+   parentObjectKey = ชื่อ key ของ object ที่ห่อ value นี้อยู่
+   เช่น ใน { "policyGroup": { "id": "xxx" } }
+   เมื่อ render "id": "xxx"  →  currentKey="id", parentObjectKey="policyGroup"
+─────────────────────────────────────────────────────────────────── */
+function pmRenderJson(val, resolver, indent = 0, ownerKey = null) {
+  const pad  = '  '.repeat(indent);
+  const pad1 = '  '.repeat(indent + 1);
+
+  if (val === null)             return `<span class="json-null">null</span>`;
+  if (typeof val === 'boolean') return `<span class="json-bool">${val}</span>`;
+  if (typeof val === 'number')  return `<span class="json-number">${val}</span>`;
+
+  if (typeof val === 'string') {
+    const custom = resolver(ownerKey, val, ownerKey);
+    if (custom) return `"${custom}"`;
+    return `<span class="json-string">"${esc(val)}"</span>`;
+  }
+
+  if (Array.isArray(val)) {
+    if (val.length === 0) return `<span class="json-punct">[]</span>`;
+    // array items inherit ownerKey of the array itself
+    const items = val.map(item =>
+      `${pad1}${pmRenderJson(item, resolver, indent + 1, ownerKey)}`
+    ).join(`<span class="json-punct">,</span>\n`);
+    return `<span class="json-punct">[</span>\n${items}\n${pad}<span class="json-punct">]</span>`;
+  }
+
+  if (typeof val === 'object') {
+    const keys = Object.keys(val);
+    if (keys.length === 0) return `<span class="json-punct">{}</span>`;
+    // ownerKey ของ object นี้คือ key ที่ถูกเรียกมา (ownerKey ปัจจุบัน)
+    // เมื่อ render แต่ละ child key k → ส่ง ownerKey=ownerKey (parent ของ object นี้) ให้ k ไม่ใช่
+    // แต่ k เป็น child ของ object นี้ ดังนั้น parentObjectKey ของ val[k] = ownerKey ของ object นี้
+    const thisObjKey = ownerKey; // key ที่ชี้มาที่ object นี้
+    const items = keys.map(k => {
+      // val[k] อยู่ภายใต้ object ที่มี key = thisObjKey (ถ้า root) หรือ ownerKey
+      // parentObjectKey ที่ resolver จะได้สำหรับ val[k] คือ key k ของ object นี้
+      // แต่เราต้องรู้ว่า object นี้ถูกชี้มาด้วย key อะไร
+      // ดังนั้น render val[k] โดยบอกว่า "parent ของ val[k] คือ k" และ "object ที่ห่อ k คือ thisObjKey"
+      const vHtml = pmRenderJsonValue(k, val[k], resolver, indent + 1, thisObjKey);
+      return `${pad1}<span class="json-key">"${esc(k)}"</span><span class="json-punct">: </span>${vHtml}`;
+    }).join(`<span class="json-punct">,</span>\n`);
+    return `<span class="json-punct">{</span>\n${items}\n${pad}<span class="json-punct">}</span>`;
+  }
+
+  return esc(String(val));
+}
+
+/*
+  pmRenderJsonValue(currentKey, val, resolver, indent, parentObjKey)
+  
+  currentKey   = key ที่ชี้มาที่ val นี้  เช่น "id"
+  parentObjKey = key ที่ชี้มาที่ object ที่เป็น parent ของ currentKey เช่น "policyGroup"
+  
+  resolver จะได้รับ (currentKey, val, parentObjKey) 
+  → resolver("id", "xxx", "policyGroup") ✅
+*/
+function pmRenderJsonValue(currentKey, val, resolver, indent, parentObjKey) {
+  const pad  = '  '.repeat(indent);
+  const pad1 = '  '.repeat(indent + 1);
+
+  if (val === null)             return `<span class="json-null">null</span>`;
+  if (typeof val === 'boolean') return `<span class="json-bool">${val}</span>`;
+  if (typeof val === 'number')  return `<span class="json-number">${val}</span>`;
+
+  if (typeof val === 'string') {
+    const custom = resolver(currentKey, val, parentObjKey);
+    if (custom) return `"${custom}"`;
+    return `<span class="json-string">"${esc(val)}"</span>`;
+  }
+
+  if (Array.isArray(val)) {
+    if (val.length === 0) return `<span class="json-punct">[]</span>`;
+    // array items: currentKey ยังคงเดิม, parentObjKey ยังคงเดิม
+    const items = val.map(item =>
+      `${pad1}${pmRenderJsonValue(currentKey, item, resolver, indent + 1, parentObjKey)}`
+    ).join(`<span class="json-punct">,</span>\n`);
+    return `<span class="json-punct">[</span>\n${items}\n${pad}<span class="json-punct">]</span>`;
+  }
+
+  if (typeof val === 'object') {
+    const keys = Object.keys(val);
+    if (keys.length === 0) return `<span class="json-punct">{}</span>`;
+    // object นี้ถูกชี้มาด้วย currentKey
+    // ดังนั้น children ของ object นี้มี parentObjKey = currentKey
+    const items = keys.map(k => {
+      const vHtml = pmRenderJsonValue(k, val[k], resolver, indent + 1, currentKey);
+      return `${pad1}<span class="json-key">"${esc(k)}"</span><span class="json-punct">: </span>${vHtml}`;
+    }).join(`<span class="json-punct">,</span>\n`);
+    return `<span class="json-punct">{</span>\n${items}\n${pad}<span class="json-punct">}</span>`;
+  }
+
+  return esc(String(val));
+}
+
+/* ─── Collect all values of a specific field name recursively ─── */
+function pmCollect(obj, fieldName, results = []) {
+  if (typeof obj !== 'object' || obj === null) return results;
+  if (Array.isArray(obj)) { obj.forEach(i => pmCollect(i, fieldName, results)); return results; }
+  Object.keys(obj).forEach(k => {
+    if (k === fieldName) results.push(obj[k]);
+    else pmCollect(obj[k], fieldName, results);
+  });
+  return results;
+}
+
+/* ─── Collect 'id' values inside objects whose parent key matches ─── */
+function pmCollectInParent(obj, parentKeyName, childKey, insideParent = false, results = []) {
+  if (typeof obj !== 'object' || obj === null) return results;
+  if (Array.isArray(obj)) {
+    obj.forEach(i => pmCollectInParent(i, parentKeyName, childKey, insideParent, results));
+    return results;
+  }
+  Object.keys(obj).forEach(k => {
+    const nowInside = k === parentKeyName ? true : insideParent;
+    if (nowInside && k === childKey) results.push(obj[k]);
+    pmCollectInParent(obj[k], parentKeyName, childKey, nowInside, results);
+  });
+  return results;
+}
+
+/* ─── Toast notification ─── */
+function pmShowToast(msg, isError = false) {
+  const el = document.getElementById('copiedMsg');
+  el.textContent = msg;
+  el.style.background = isError ? 'var(--red)' : 'var(--green)';
+  el.style.color = '#0d0f14';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ─── Shared utilities ─────────────────────────────────────────── */
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(s) {
+  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+  return (b/1024/1024).toFixed(1) + ' MB';
+}
+
+function errBox(msg, detail) {
+  return `<div class="error-text"><div>${esc(msg)}</div>${detail ? `<div class="error-detail">${esc(detail)}</div>` : ''}</div>`;
+}
+
+function showCopied() {
+  const msg = document.getElementById('copiedMsg');
+  msg.textContent = '✓ Copied to clipboard';
+  msg.style.background = 'var(--green)';
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 2000);
+}
+
+function syntaxHighlight(json) {
+  return esc(json).replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[{}\[\],:])/g,
+    m => {
+      if (/^"/.test(m))        return /:$/.test(m) ? `<span class="json-key">${m}</span>` : `<span class="json-string">${m}</span>`;
+      if (/true|false/.test(m)) return `<span class="json-bool">${m}</span>`;
+      if (/null/.test(m))       return `<span class="json-null">${m}</span>`;
+      if (/[{}\[\]]/.test(m))   return `<span class="json-punct">${m}</span>`;
+      if (/,/.test(m))          return `<span class="json-punct">${m}</span>`;
+      return `<span class="json-number">${m}</span>`;
+    }
+  );
+}
+
+/* ─── Init ─────────────────────────────────────────────────────── */
+fvSetSource('server');
+</script>
+</body>
+</html>

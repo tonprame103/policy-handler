@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Tool — Policy Management</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.pm-layout { display: flex; flex-direction: column; gap: 14px; }
+
+/* Folder grid */
+.folder-grid-2 {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+
+/* Search row */
+.search-row { display: flex; gap: 8px; align-items: center; }
+
+/* Viewer */
+#pmViewer { display: none; flex-direction: column; gap: 10px; }
+#pmViewer.open { display: flex; }
+
+/* File info strip */
+.file-info-strip {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; border-radius: var(--r);
+  background: var(--bg2); border: 1px solid var(--border);
+  font-family: var(--mono); font-size: 11px;
+}
+.fi-name { color: var(--text); font-weight: 600; }
+.fi-path { color: var(--muted); font-size: 10px; }
+
+/* Folder status */
+.folder-card-inner { pointer-events: none; }
+.fc-icon { font-size: 2rem; }
+.fc-name { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text); }
+.fc-status { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.fc-status.ok { color: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<div class="topbar">
+  <a class="topbar-brand" href="index.html">
+    <div class="topbar-logo">{}</div>
+    <div class="topbar-title">JSON<span>Tool</span></div>
+  </a>
+  <nav class="nav-links">
+    <a class="nav-link" href="index.html">
+      <span class="nav-icon">✓</span>
+      <span>Validate Json Input</span>
+    </a>
+    <a class="nav-link" href="files.html">
+      <span class="nav-icon">📁</span>
+      <span>Validate Json With Files</span>
+    </a>
+    <a class="nav-link active" href="policy.html">
+      <span class="nav-icon">🛡</span>
+      <span>Policy Management</span>
+    </a>
+  </nav>
+  <div class="nav-right">
+    <span class="badge-pill badge-blue">Spring Boot 4.0.5</span>
+    <span class="badge-pill badge-amber">Java 25</span>
+    <span class="badge-pill badge-green"><span class="pulse-dot"></span> running</span>
+  </div>
+</div>
+
+<div class="page-content">
+<div class="pm-layout">
+
+  <!-- Step 1: Browse Folders -->
+  <div class="card-block">
+    <div class="card-block-title">📂 Step 1 — เลือก Policy Folders</div>
+    <div class="folder-grid-2">
+
+      <!-- Common -->
+      <div class="folder-card" id="fc-common" onclick="document.getElementById('inp-common').click()">
+        <input type="file" id="inp-common" webkitdirectory multiple onchange="pmLoadFolder('common',this)">
+        <div class="folder-card-inner">
+          <div class="fc-icon">📘</div>
+          <div class="fc-name">PolicyCommon</div>
+          <div class="fc-status" id="st-common">คลิกเพื่อเลือก folder</div>
+        </div>
+      </div>
+
+      <!-- Activity -->
+      <div class="folder-card" id="fc-activity" onclick="document.getElementById('inp-activity').click()">
+        <input type="file" id="inp-activity" webkitdirectory multiple onchange="pmLoadFolder('activity',this)">
+        <div class="folder-card-inner">
+          <div class="fc-icon">📙</div>
+          <div class="fc-name">PolicyActivity</div>
+          <div class="fc-status" id="st-activity">คลิกเพื่อเลือก folder</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Step 2: Search -->
+  <div class="card-block">
+    <div class="card-block-title">🔍 Step 2 — ค้นหา Policy Spec</div>
+    <div class="search-row">
+      <input class="text-input" id="pmSearch" type="text"
+        placeholder="ชื่อไฟล์ PolicySpec เช่น MySpec หรือ MySpec.json"
+        onkeydown="if(event.key==='Enter')pmDoSearch()" style="flex:1;">
+      <button class="btn btn-primary" onclick="pmDoSearch()">🔍 Search</button>
+      <button class="btn" onclick="pmClear()">Clear</button>
+    </div>
+    <div id="pmSearchResult" style="margin-top:10px;"></div>
+  </div>
+
+  <!-- Viewer area -->
+  <div id="pmViewer">
+    <div class="breadcrumb" id="pmBreadcrumb"></div>
+    <div class="file-info-strip" id="pmFileInfo"></div>
+    <div id="pmNotice"></div>
+    <div class="json-viewer" id="pmJsonViewer"></div>
+  </div>
+
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── STATE ── */
+const pmFolders = { common: {}, activity: {} };
+const pmReady   = { common: false, activity: false };
+const pmBC      = [];  // { label, type, source, fileKey }
+
+/* ── Load folder ── */
+function pmLoadFolder(src, input) {
+  const all = Array.from(input.files);
+  const jsons = all.filter(f => f.name.endsWith('.json'));
+  pmFolders[src] = {}; pmReady[src] = false;
+
+  const card = document.getElementById('fc-' + src);
+  const st   = document.getElementById('st-'  + src);
+  card.classList.remove('loaded');
+  st.className = 'fc-status';
+
+  if (!jsons.length) { st.textContent = '⚠ ไม่พบ .json files'; pmReady[src]=true; return; }
+  st.textContent = `Loading 0/${jsons.length}…`;
+
+  let done = 0;
+  Promise.all(jsons.map(file => new Promise(resolve => {
+    const parts = file.webkitRelativePath.split('/');
+    const rel   = parts.slice(1).join('/');
+    const r = new FileReader();
+    r.onload = e => {
+      let parsed = null;
+      try { parsed = JSON.parse(e.target.result); } catch(_) {}
+      pmFolders[src][rel] = { name: file.name, relPath: rel, content: e.target.result, parsed };
+      done++;
+      st.textContent = `Loading ${done}/${jsons.length}…`;
+      resolve();
+    };
+    r.onerror = () => resolve();
+    r.readAsText(file);
+  }))).then(() => {
+    pmReady[src] = true;
+    card.classList.add('loaded');
+    st.textContent = `✓ ${jsons.length} JSON files loaded`;
+    st.className = 'fc-status ok';
+    console.log(`[PM] ${src}:`, Object.keys(pmFolders[src]));
+  });
+}
+
+/* ── Normalize ── */
+const pmNorm = p => p.replace(/\\/g,'/').toLowerCase();
+
+/* ── Find file ── */
+function pmFind(src, candidates, typeHint) {
+  const store = pmFolders[src];
+  const keys  = Object.keys(store);
+
+  // 1. exact
+  for (const c of candidates) {
+    const nc = pmNorm(c);
+    for (const k of keys) if (pmNorm(k)===nc) return { key:k, ...store[k] };
+  }
+  // 2. ends-with
+  for (const c of candidates) {
+    const nc = pmNorm(c);
+    for (const k of keys) if (pmNorm(k).endsWith('/'+nc)||pmNorm(k).endsWith(nc)) return { key:k, ...store[k] };
+  }
+  // 3. filename + type hint
+  const tgt = pmNorm(candidates[0].split('/').pop());
+  const th  = typeHint ? typeHint.toLowerCase() : '';
+  for (const k of keys) {
+    const nk = pmNorm(k);
+    if (nk.split('/').pop()===tgt && (!th || nk.includes('/'+th+'/'))) return { key:k, ...store[k] };
+  }
+  // 3b. filename only
+  for (const k of keys) if (pmNorm(k).split('/').pop()===tgt) return { key:k, ...store[k] };
+  return null;
+}
+
+/* ── Candidates ── */
+function pmCandidates(type, fname) {
+  const f = fname.endsWith('.json') ? fname : fname+'.json';
+  const paths = [];
+  ['CFS','RFS'].forEach(sf => {
+    paths.push(`${sf}/Policy/${type}/${f}`);
+    paths.push(`${sf}/Policy/${type.toLowerCase()}/${f}`);
+  });
+  paths.push(`Policy/${type}/${f}`);
+  paths.push(`Policy/${type.toLowerCase()}/${f}`);
+  paths.push(f);
+  return paths;
+}
+
+/* ── Search ── */
+function pmDoSearch() {
+  const raw = document.getElementById('pmSearch').value.trim();
+  if (!raw) return;
+  const fname = raw.endsWith('.json') ? raw : raw+'.json';
+  const res   = document.getElementById('pmSearchResult');
+
+  const cc = Object.keys(pmFolders.common).length;
+  const ac = Object.keys(pmFolders.activity).length;
+  if (!cc && !ac) { res.innerHTML=`<div class="alert alert-err">⚠ กรุณา browse folder ก่อน</div>`; return; }
+  if (!pmReady.common && !pmReady.activity) { res.innerHTML=`<div class="alert alert-inf"><span class="spinner"></span> Loading…</div>`; return; }
+
+  res.innerHTML=`<div class="alert alert-inf"><span class="spinner"></span> Searching "${esc(fname)}"…</div>`;
+
+  setTimeout(() => {
+    let found=null, foundSrc=null;
+    for (const src of ['common','activity']) {
+      const r = pmFind(src, pmCandidates('Spec', fname), 'Spec');
+      if (r) { found=r; foundSrc=src; break; }
+    }
+
+    if (!found) {
+      const nf = pmNorm(fname);
+      const hints = [];
+      ['common','activity'].forEach(s => Object.keys(pmFolders[s]).forEach(k => {
+        if (pmNorm(k).includes(nf.replace('.json',''))) hints.push(`[${s}] ${k}`);
+      }));
+      const hint = hints.length
+        ? `<small style="color:var(--muted)">Similar: ${hints.map(h=>esc(h)).join(', ')}</small>`
+        : `<small style="color:var(--muted)">Common: ${cc} | Activity: ${ac} files</small>`;
+      res.innerHTML=`<div class="alert alert-err">❌ ไม่พบ "${esc(fname)}"<br>${hint}</div>`;
+      return;
+    }
+
+    const srcLabel = foundSrc==='common' ? 'PolicyCommon' : 'PolicyActivity';
+    const badgeCls = foundSrc==='common' ? 'badge-cm' : 'badge-ac';
+    res.innerHTML=`<div class="alert alert-ok">✅ พบ <strong>${esc(found.name)}</strong> &nbsp;
+      <span class="badge ${badgeCls}">${srcLabel}</span> &nbsp;
+      <span style="color:var(--muted);font-size:10px;">${esc(found.key)}</span></div>`;
+
+    pmBC.length=0;
+    pmBC.push({ label:found.name, type:'Spec', source:foundSrc, fileKey:found.key });
+    pmRender('Spec', found, foundSrc);
+  }, 60);
+}
+
+function pmClear() {
+  document.getElementById('pmSearch').value='';
+  document.getElementById('pmSearchResult').innerHTML='';
+  document.getElementById('pmViewer').style.display='none';
+  document.getElementById('pmViewer').classList.remove('open');
+  pmBC.length=0;
+}
+
+/* ── Render viewer ── */
+function pmRender(type, fileObj, src) {
+  const viewer = document.getElementById('pmViewer');
+  viewer.style.display='flex'; viewer.classList.add('open');
+
+  pmRenderBC();
+
+  const srcLabel = src==='common' ? 'PolicyCommon' : 'PolicyActivity';
+  const bcls     = src==='common' ? 'badge-cm' : 'badge-ac';
+  document.getElementById('pmFileInfo').innerHTML=`
+    <span class="fi-name">📄 ${esc(fileObj.name)}</span>
+    <span class="fi-path">${esc(fileObj.key)}</span>
+    <span class="badge ${bcls}">${srcLabel}</span>
+    <span class="badge badge-neu" style="text-transform:uppercase;font-size:9px;">${type}</span>
+  `;
+
+  const notice = document.getElementById('pmNotice');
+  const jv     = document.getElementById('pmJsonViewer');
+
+  if (!fileObj.parsed) {
+    notice.innerHTML=`<div class="alert alert-err">⚠ ไม่สามารถ parse JSON ได้</div>`;
+    jv.textContent = fileObj.content||'';
+    return;
+  }
+
+  let html='', noteHtml='';
+
+  if (type==='Spec') {
+    const ids = pmCollect(fileObj.parsed, 'policySetId');
+    if (ids.length) noteHtml=`<div class="alert alert-inf">🔗 พบ <strong>policySetId</strong> ${ids.length} รายการ — คลิกเพื่อเปิด PolicySet</div>`;
+    html = pmRenderJson(fileObj.parsed, (key,val) => {
+      if (key==='policySetId'&&typeof val==='string')
+        return `<span class="j-link" onclick="pmOpenLinked('Set','${escA(val)}','${escA(src)}')">${esc(val)}</span>`;
+      return null;
+    });
+  } else if (type==='Set') {
+    const ids = pmCollectIn(fileObj.parsed,'policyGroup','id');
+    if (ids.length) noteHtml=`<div class="alert alert-inf">🔗 พบ <strong>policyGroup.id</strong> ${ids.length} รายการ — คลิกเพื่อเปิด PolicyGroup</div>`;
+    html = pmRenderJson(fileObj.parsed, (key,val,pk) => {
+      if (key==='id'&&pk==='policyGroup'&&typeof val==='string')
+        return `<span class="j-link" onclick="pmOpenLinked('Group','${escA(val)}','${escA(src)}')">${esc(val)}</span>`;
+      return null;
+    });
+  } else if (type==='Group') {
+    const ids = pmCollectIn(fileObj.parsed,'policyRule','id');
+    if (ids.length) noteHtml=`<div class="alert alert-inf">🔗 พบ <strong>policyRule.id</strong> ${ids.length} รายการ — คลิกเพื่อเปิด PolicyRule</div>`;
+    html = pmRenderJson(fileObj.parsed, (key,val,pk) => {
+      if (key==='id'&&pk==='policyRule'&&typeof val==='string')
+        return `<span class="j-link" onclick="pmOpenLinked('Rule','${escA(val)}','${escA(src)}')">${esc(val)}</span>`;
+      return null;
+    });
+  } else {
+    html = pmRenderJson(fileObj.parsed, ()=>null);
+  }
+
+  notice.innerHTML = noteHtml;
+  jv.innerHTML = html;
+  viewer.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ── Open linked ── */
+function pmOpenLinked(type, id, preferSrc) {
+  const fname = id.endsWith('.json') ? id : id+'.json';
+  const cands = pmCandidates(type, fname);
+  let found=null, foundSrc=null;
+  for (const src of ['common','activity']) {
+    const r=pmFind(src,cands,type);
+    if(r){found=r;foundSrc=src;break;}
+  }
+  if (!found) { showToast(`❌ ไม่พบ Policy${type}: "${fname}"`,true); return; }
+  pmBC.push({ label:found.name, type, source:foundSrc, fileKey:found.key });
+  pmRender(type, found, foundSrc);
+}
+
+/* ── Breadcrumb ── */
+function pmRenderBC() {
+  const el = document.getElementById('pmBreadcrumb');
+  el.innerHTML = pmBC.map((item,i) => {
+    const sep = i>0 ? `<span class="bc-sep">›</span>` : '';
+    if (i===pmBC.length-1) return sep+`<span class="bc-cur">${esc(item.label)}</span>`;
+    return sep+`<span class="bc-link" onclick="pmBcNav(${i})">${esc(item.label)}</span>`;
+  }).join('');
+}
+function pmBcNav(idx) {
+  pmBC.splice(idx+1);
+  const item = pmBC[idx];
+  const fo = pmFolders[item.source][item.fileKey];
+  if (fo) pmRender(item.type, {...fo, key:item.fileKey}, item.source);
+}
+
+/* ── JSON renderer ── */
+function pmRenderJson(val, resolver, indent=0, ownerKey=null) {
+  const p = '  '.repeat(indent), p1 = '  '.repeat(indent+1);
+  if (val===null) return `<span class="j-null">null</span>`;
+  if (typeof val==='boolean') return `<span class="j-bool">${val}</span>`;
+  if (typeof val==='number')  return `<span class="j-num">${val}</span>`;
+  if (typeof val==='string') {
+    const c=resolver(ownerKey,val,ownerKey); if(c) return `"${c}"`;
+    return `<span class="j-str">"${esc(val)}"</span>`;
+  }
+  if (Array.isArray(val)) {
+    if(!val.length) return `<span class="j-pun">[]</span>`;
+    const items=val.map(i=>`${p1}${pmRenderJson(i,resolver,indent+1,ownerKey)}`).join(`<span class="j-pun">,</span>\n`);
+    return `<span class="j-pun">[</span>\n${items}\n${p}<span class="j-pun">]</span>`;
+  }
+  if (typeof val==='object') {
+    const keys=Object.keys(val);
+    if(!keys.length) return `<span class="j-pun">{}</span>`;
+    const items=keys.map(k=>{
+      const vh=pmRenderJsonVal(k,val[k],resolver,indent+1,ownerKey);
+      return `${p1}<span class="j-key">"${esc(k)}"</span><span class="j-pun">: </span>${vh}`;
+    }).join(`<span class="j-pun">,</span>\n`);
+    return `<span class="j-pun">{</span>\n${items}\n${p}<span class="j-pun">}</span>`;
+  }
+  return esc(String(val));
+}
+
+function pmRenderJsonVal(curKey, val, resolver, indent, parentKey) {
+  const p='  '.repeat(indent), p1='  '.repeat(indent+1);
+  if (val===null) return `<span class="j-null">null</span>`;
+  if (typeof val==='boolean') return `<span class="j-bool">${val}</span>`;
+  if (typeof val==='number')  return `<span class="j-num">${val}</span>`;
+  if (typeof val==='string') {
+    const c=resolver(curKey,val,parentKey); if(c) return `"${c}"`;
+    return `<span class="j-str">"${esc(val)}"</span>`;
+  }
+  if (Array.isArray(val)) {
+    if(!val.length) return `<span class="j-pun">[]</span>`;
+    const items=val.map(i=>`${p1}${pmRenderJsonVal(curKey,i,resolver,indent+1,parentKey)}`).join(`<span class="j-pun">,</span>\n`);
+    return `<span class="j-pun">[</span>\n${items}\n${p}<span class="j-pun">]</span>`;
+  }
+  if (typeof val==='object') {
+    const keys=Object.keys(val);
+    if(!keys.length) return `<span class="j-pun">{}</span>`;
+    const items=keys.map(k=>{
+      const vh=pmRenderJsonVal(k,val[k],resolver,indent+1,curKey);
+      return `${p1}<span class="j-key">"${esc(k)}"</span><span class="j-pun">: </span>${vh}`;
+    }).join(`<span class="j-pun">,</span>\n`);
+    return `<span class="j-pun">{</span>\n${items}\n${p}<span class="j-pun">}</span>`;
+  }
+  return esc(String(val));
+}
+
+/* ── Collect helpers ── */
+function pmCollect(obj,field,res=[]){
+  if(typeof obj!=='object'||obj===null)return res;
+  if(Array.isArray(obj)){obj.forEach(i=>pmCollect(i,field,res));return res;}
+  Object.keys(obj).forEach(k=>{if(k===field)res.push(obj[k]);else pmCollect(obj[k],field,res);});
+  return res;
+}
+function pmCollectIn(obj,pk,ck,inPk=false,res=[]){
+  if(typeof obj!=='object'||obj===null)return res;
+  if(Array.isArray(obj)){obj.forEach(i=>pmCollectIn(i,pk,ck,inPk,res));return res;}
+  Object.keys(obj).forEach(k=>{
+    const now=k===pk?true:inPk;
+    if(now&&k===ck)res.push(obj[k]);
+    pmCollectIn(obj[k],pk,ck,now,res);
+  });
+  return res;
+}
+
+/* ── Utils ── */
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escA(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function showToast(msg,isErr=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(isErr?' err':'');
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>

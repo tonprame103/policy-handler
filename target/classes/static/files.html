@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Tool — Files</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.files-layout { display: flex; flex-direction: column; gap: 14px; }
+
+/* Source selector */
+.source-tabs { display: flex; gap: 6px; }
+.src-tab {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  padding: 6px 14px; border-radius: var(--r);
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--muted); cursor: pointer; transition: all 0.12s;
+}
+.src-tab.active { border-color: var(--amber); color: var(--amber); background: rgba(232,160,32,0.06); }
+.src-tab:not(.active):hover { color: var(--text); border-color: var(--dim); }
+
+/* Summary row */
+.summary-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.stat-chip {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px;
+  padding: 5px 10px; border-radius: var(--r);
+  background: var(--bg2); border: 1px solid var(--border);
+}
+.stat-chip .val { font-weight: 600; color: var(--text); }
+.stat-chip .lbl { color: var(--muted); }
+
+/* Filter row */
+.filter-row { display: flex; align-items: center; gap: 6px; }
+.filter-input {
+  background: var(--bg); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 5px 10px;
+  color: var(--text); font-family: var(--mono); font-size: 11px;
+  outline: none; transition: border 0.12s; width: 180px;
+}
+.filter-input:focus { border-color: var(--amber); }
+.filter-input::placeholder { color: var(--muted); }
+
+.tab-btns { display: flex; gap: 4px; margin-left: auto; }
+.tab-btn {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  padding: 4px 10px; border-radius: var(--r);
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--muted); cursor: pointer; transition: all 0.12s;
+}
+.tab-btn.active { border-color: var(--amber); color: var(--amber); }
+.tab-btn:not(.active):hover { color: var(--text); }
+
+/* File meta */
+.file-name { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text); }
+.file-meta { font-family: var(--mono); font-size: 10px; color: var(--muted); display: flex; gap: 10px; margin-top: 2px; }
+.file-preview {
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+  background: var(--bg); padding: 4px 8px; border-radius: var(--r);
+  border: 1px solid var(--border); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; margin-top: 6px;
+}
+
+/* Detail view */
+#detailView { display: none; flex-direction: column; gap: 10px; }
+#detailView.open { display: flex; }
+
+.edit-area {
+  display: none; width: 100%; min-height: 360px;
+  background: var(--bg); border: none;
+  border-top: 1px solid var(--border); outline: none;
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  line-height: 1.7; padding: 14px 16px; resize: vertical;
+}
+
+/* Error context */
+.err-context {
+  background: var(--bg2); border: 1px solid rgba(232,64,64,0.3);
+  border-radius: var(--r); padding: 8px 12px;
+  font-family: var(--mono); font-size: 11px; color: var(--text);
+  overflow-x: auto; white-space: pre; margin-top: 8px;
+}
+
+/* Progress */
+.progress-wrap { padding: 4px 0; }
+
+/* Invalid section */
+.inv-section { display: flex; flex-direction: column; gap: 6px; }
+.section-header-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding-bottom: 6px; margin-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+}
+.inv-color { color: var(--red); }
+.ok-color  { color: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<div class="topbar">
+  <a class="topbar-brand" href="index.html">
+    <div class="topbar-logo">{}</div>
+    <div class="topbar-title">JSON<span>Tool</span></div>
+  </a>
+  <nav class="nav-links">
+    <a class="nav-link" href="index.html">
+      <span class="nav-icon">✓</span>
+      <span>Validate Json Input</span>
+    </a>
+    <a class="nav-link active" href="files.html">
+      <span class="nav-icon">📁</span>
+      <span>Validate Json With Files</span>
+    </a>
+    <a class="nav-link" href="policy.html">
+      <span class="nav-icon">🛡</span>
+      <span>Policy Management</span>
+    </a>
+  </nav>
+  <div class="nav-right">
+    <span class="badge-pill badge-blue">Spring Boot 4.0.5</span>
+    <span class="badge-pill badge-amber">Java 25</span>
+    <span class="badge-pill badge-green"><span class="pulse-dot"></span> running</span>
+  </div>
+</div>
+
+<div class="page-content">
+
+  <!-- LIST VIEW -->
+  <div id="listView" class="files-layout">
+
+    <!-- Source card -->
+    <div class="card-block">
+      <div class="card-block-title">📂 แหล่งไฟล์ JSON</div>
+      <div class="source-tabs" style="margin-bottom:12px;">
+        <button class="src-tab active" id="srcServer" onclick="setSource('server')">🖥 Server Folder</button>
+        <button class="src-tab" id="srcLocal" onclick="setSource('local')">💻 Local Folder</button>
+      </div>
+
+      <!-- Server row -->
+      <div id="serverRow" style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:7px 12px;font-family:var(--mono);font-size:11px;">
+          <span>📂</span>
+          <span id="serverPath" style="color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">Loading…</span>
+        </div>
+        <button class="btn btn-primary" onclick="loadServer()">↻ Refresh</button>
+      </div>
+
+      <!-- Local row -->
+      <div id="localRow" style="display:none;flex-direction:column;gap:8px;">
+        <input type="file" id="localInput" webkitdirectory multiple onchange="loadLocal(this)" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div id="localStatus"
+            style="flex:1;background:var(--bg);border:1.5px dashed var(--border2);border-radius:var(--r);padding:8px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);cursor:pointer;text-align:center;"
+            onclick="browseLocal()">
+            คลิกเพื่อเลือก Folder
+          </div>
+          <button class="btn btn-primary" onclick="browseLocal()">📂 Browse</button>
+          <button class="btn btn-danger" id="clearBtn" onclick="clearLocal()" style="display:none">✕</button>
+        </div>
+        <div id="progressWrap" style="display:none;" class="progress-wrap">
+          <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary + filter -->
+    <div id="summaryRow" style="display:none;" class="summary-row">
+      <div class="stat-chip"><span class="val" id="statTotal">0</span><span class="lbl">ไฟล์</span></div>
+      <div class="stat-chip" style="border-color:rgba(32,192,112,0.25)">
+        <span class="val" style="color:var(--green)" id="statValid">0</span><span class="lbl">Valid</span>
+      </div>
+      <div class="stat-chip" style="border-color:rgba(232,64,64,0.25)">
+        <span class="val" style="color:var(--red)" id="statInvalid">0</span><span class="lbl">Invalid</span>
+      </div>
+      <div style="flex:1"></div>
+      <div class="filter-row">
+        <input class="filter-input" id="filterInput" placeholder="Filter files…" oninput="renderList()">
+        <div class="tab-btns">
+          <button class="tab-btn active" id="tabAll"     onclick="setTab('all')">All</button>
+          <button class="tab-btn" id="tabValid"   onclick="setTab('valid')">Valid</button>
+          <button class="tab-btn" id="tabInvalid" onclick="setTab('invalid')">Invalid</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- File list area -->
+    <div id="listArea">
+      <div class="empty-state"><div class="empty-icon">📂</div><div>เลือก folder เพื่อเริ่มต้น</div></div>
+    </div>
+
+  </div>
+
+  <!-- DETAIL VIEW -->
+  <div id="detailView">
+    <button class="back-btn" onclick="closeDetail()">← Back to file list</button>
+    <div class="panel" style="display:flex;flex-direction:column;">
+      <div class="panel-head">
+        <div class="panel-label">📄 <span id="detailName">file.json</span></div>
+        <div class="panel-actions">
+          <span id="detailBadge" class="badge badge-neu"></span>
+          <button class="btn" id="editBtn" onclick="enterEdit()" style="display:none">✏ Edit</button>
+          <button class="btn" id="cancelBtn" onclick="cancelEdit()" style="display:none">✕ Cancel</button>
+          <button class="btn" id="validateEditBtn" onclick="validateEdit()" style="display:none">▶ Validate</button>
+          <button class="btn btn-primary" id="saveBtn" onclick="saveFile()" style="display:none">💾 Save</button>
+          <button class="btn" id="copyBtn" onclick="copyContent()" style="display:none">Copy</button>
+        </div>
+      </div>
+      <div id="detailNotice" style="padding:10px 14px 0;"></div>
+      <div class="result-box" id="detailBox" style="flex:1;"></div>
+      <textarea class="edit-area" id="editArea" spellcheck="false"
+        oninput="onEditInput()" placeholder="แก้ไข JSON ที่นี่…"></textarea>
+      <div class="statusbar">
+        <span id="detailInfo" style="font-family:var(--mono);font-size:10px;color:var(--muted);"></span>
+        <span id="editStatus" style="font-family:var(--mono);font-size:10px;display:none;"></span>
+        <span id="editCharCount" style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:auto;display:none;"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api';
+let fvSource    = 'server';
+let fvAllFiles  = [];
+let fvTab       = 'all';
+let fvCopyCache = '';
+let fvCurrentFile = null;
+let fvEditMode  = false;
+let fvEditValid = false;
+
+/* ── Source ── */
+function setSource(src) {
+  fvSource = src;
+  fvAllFiles = []; fvCurrentFile = null; fvEditMode = false; fvEditValid = false;
+  closeDetail(true);
+  document.getElementById('serverRow').style.display = src === 'server' ? 'flex' : 'none';
+  document.getElementById('localRow').style.display  = src === 'local'  ? 'flex' : 'none';
+  document.getElementById('srcServer').className = 'src-tab' + (src === 'server' ? ' active' : '');
+  document.getElementById('srcLocal').className  = 'src-tab' + (src === 'local'  ? ' active' : '');
+  if (src === 'server') loadServer();
+  else showEmpty('คลิก Browse เพื่อเลือก Folder');
+}
+
+/* ── Server ── */
+async function loadServer() {
+  fvAllFiles = [];
+  showLoading();
+  try {
+    const res  = await fetch(API + '/files');
+    const data = await res.json();
+    document.getElementById('serverPath').textContent = data.folderPath || '—';
+    if (!data.files?.length) { showEmpty('ไม่พบไฟล์ .json ใน server folder'); return; }
+    fvAllFiles = data.files.map(f => ({
+      name: f.fileName, relPath: f.fileName, size: f.sizeBytes,
+      valid: f.valid, error: f.valid ? null : (f.preview || 'Invalid JSON'),
+      errorDetail: null, content: null, formatted: null, source: 'server'
+    }));
+    renderSummary(); renderList();
+  } catch (e) { showEmpty('Server error: ' + e.message); }
+}
+
+/* ── Local ── */
+function browseLocal() {
+  const inp = document.getElementById('localInput');
+  inp.value = ''; inp.click();
+}
+function clearLocal() {
+  fvAllFiles = [];
+  document.getElementById('localInput').value = '';
+  const s = document.getElementById('localStatus');
+  s.textContent = 'คลิกเพื่อเลือก Folder';
+  s.style.cssText = 'flex:1;background:var(--bg);border:1.5px dashed var(--border2);border-radius:var(--r);padding:8px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);cursor:pointer;text-align:center;';
+  document.getElementById('clearBtn').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  document.getElementById('summaryRow').style.display = 'none';
+  showEmpty('เลือก folder เพื่อเริ่มต้น');
+}
+function loadLocal(input) {
+  const all = Array.from(input.files).filter(f => f.name.endsWith('.json'));
+  if (!all.length) { document.getElementById('localStatus').textContent = '⚠ ไม่พบ .json files'; return; }
+
+  fvAllFiles = []; fvCurrentFile = null; showLoading();
+  const s = document.getElementById('localStatus');
+  const pw = document.getElementById('progressWrap');
+  const pb = document.getElementById('progressBar');
+  s.textContent = `พบ ${all.length} ไฟล์ — กำลังโหลด…`;
+  s.style.borderStyle = 'dashed'; s.style.color = 'var(--muted)';
+  pw.style.display = 'block'; pb.style.width = '0%';
+  document.getElementById('clearBtn').style.display = 'none';
+
+  const folder = all[0].webkitRelativePath?.split('/')[0] || 'Local';
+  let done = 0;
+
+  Promise.all(all.map(file => new Promise(resolve => {
+    const parts = file.webkitRelativePath ? file.webkitRelativePath.split('/') : [file.name];
+    const relPath = parts.length > 1 ? parts.slice(1).join('/') : file.name;
+    const r = new FileReader();
+    r.onload = e => {
+      const raw = e.target.result;
+      let valid=true,error=null,errorDetail=null,formatted=null;
+      try { formatted = JSON.stringify(JSON.parse(raw),null,2); }
+      catch(ex) { valid=false; error=ex.message; errorDetail=parseJSONError(ex.message,raw); }
+      done++;
+      pb.style.width = Math.round(done/all.length*100)+'%';
+      s.textContent = `${done}/${all.length}…`;
+      resolve({ name:file.name, relPath, size:file.size, valid, error, errorDetail, content:raw, formatted, source:'local' });
+    };
+    r.onerror = () => { done++; resolve({ name:file.name, relPath, size:file.size, valid:false, error:'Read error', errorDetail:null, content:null, formatted:null, source:'local' }); };
+    r.readAsText(file);
+  }))).then(results => {
+    if (fvSource !== 'local') return;
+    fvAllFiles = results;
+    const ok = results.filter(r=>r.valid).length, bad = results.length-ok;
+    s.textContent = `✓ "${folder}" — ${results.length} ไฟล์ (Valid:${ok}, Invalid:${bad})`;
+    s.style.borderStyle = 'solid'; s.style.borderColor = bad > 0 ? 'var(--amber)' : 'var(--green)';
+    s.style.color = bad > 0 ? 'var(--amber)' : 'var(--green)';
+    pb.style.width = '100%';
+    document.getElementById('clearBtn').style.display = 'inline-flex';
+    setTimeout(() => { pw.style.display = 'none'; }, 600);
+    renderSummary(); renderList();
+  });
+}
+
+function parseJSONError(msg, raw) {
+  const pm = msg.match(/position (\d+)/i);
+  if (pm) {
+    const pos = parseInt(pm[1]);
+    const lines = raw.substring(0,pos).split('\n');
+    const line = lines.length, col = lines[lines.length-1].length+1;
+    const ctx = raw.split('\n').slice(Math.max(0,line-2),line+1)
+      .map((l,i)=>`${String(line-1+i-Math.max(0,line-2)).padStart(4)} │ ${l}`).join('\n');
+    return {line,col,context:ctx};
+  }
+  const lm = msg.match(/line (\d+).*column (\d+)/i);
+  if (lm) {
+    const line=parseInt(lm[1]),col=parseInt(lm[2]);
+    const ctx = (raw||'').split('\n').slice(Math.max(0,line-2),line+1)
+      .map((l,i)=>`${String(line-1+i-Math.max(0,line-2)).padStart(4)} │ ${l}`).join('\n');
+    return {line,col,context:ctx};
+  }
+  return null;
+}
+
+/* ── Render ── */
+function renderSummary() {
+  const t=fvAllFiles.length, v=fvAllFiles.filter(f=>f.valid).length;
+  document.getElementById('statTotal').textContent=t;
+  document.getElementById('statValid').textContent=v;
+  document.getElementById('statInvalid').textContent=t-v;
+  document.getElementById('summaryRow').style.display='flex';
+}
+
+function setTab(tab) {
+  fvTab = tab;
+  ['all','valid','invalid'].forEach(t => {
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).className =
+      'tab-btn'+(t===tab?' active':'');
+  });
+  renderList();
+}
+
+function renderList() {
+  const filter = (document.getElementById('filterInput').value||'').toLowerCase();
+  let files = fvAllFiles.filter(f => {
+    if (fvTab==='valid'   && !f.valid) return false;
+    if (fvTab==='invalid' &&  f.valid) return false;
+    if (filter && !f.name.toLowerCase().includes(filter)) return false;
+    return true;
+  });
+  if (!files.length) { showEmpty('ไม่พบไฟล์ที่ตรงกับเงื่อนไข'); return; }
+
+  const inv = files.filter(f=>!f.valid);
+  const ok  = files.filter(f=> f.valid);
+  let html = '';
+
+  if (inv.length) {
+    html += `<div class="inv-section" style="margin-bottom:14px;">
+      <div class="section-header-label inv-color">❌ Invalid JSON — ${inv.length} files</div>
+      ${inv.map(invCard).join('')}
+    </div>`;
+  }
+  if (ok.length && fvTab!=='invalid') {
+    html += `<div>
+      <div class="section-header-label ok-color" style="margin-bottom:8px;">✅ Valid JSON — ${ok.length} files</div>
+      <div class="file-grid">${ok.map(validCard).join('')}</div>
+    </div>`;
+  }
+  document.getElementById('listArea').innerHTML = html;
+}
+
+function validCard(f) {
+  const prev = f.formatted ? f.formatted.substring(0,90).replace(/\n/g,' ') : '';
+  return `<div class="file-card" onclick="openFile('${escA(f.relPath)}')">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="file-name">📄 ${esc(f.name)}</div>
+      <span class="badge badge-ok">✓</span>
+    </div>
+    <div class="file-meta"><span>${fmtSize(f.size)}</span>${f.relPath!==f.name?`<span>${esc(f.relPath)}</span>`:''}</div>
+    <div class="file-preview">${esc(prev)}</div>
+  </div>`;
+}
+function invCard(f) {
+  const ed = f.errorDetail;
+  return `<div class="file-card invalid" onclick="openFile('${escA(f.relPath)}')">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+      <div class="file-name">📄 ${esc(f.name)}</div>
+      <span class="badge badge-err">✗</span>
+    </div>
+    ${f.relPath!==f.name?`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);">${esc(f.relPath)}</div>`:''}
+    <div style="font-family:var(--mono);font-size:11px;color:var(--red);margin-top:4px;">${esc(f.error||'Invalid JSON')}</div>
+    ${ed?`<div style="font-family:var(--mono);font-size:10px;color:var(--muted);">Line ${ed.line}, Col ${ed.col}</div>`:''}
+    ${ed?.context?`<pre class="err-context">${esc(ed.context)}</pre>`:''}
+  </div>`;
+}
+
+/* ── Open file ── */
+async function openFile(relPath) {
+  const f = fvAllFiles.find(x=>x.relPath===relPath);
+  if (!f) return;
+  fvCurrentFile = f; fvEditMode = false; fvEditValid = false;
+
+  document.getElementById('listView').style.display = 'none';
+  const dv = document.getElementById('detailView');
+  dv.style.display = 'flex'; dv.classList.add('open');
+
+  resetDetailUI(f);
+  if (f.source==='local') renderLocalFile(f);
+  else await renderServerFile(f);
+}
+
+function resetDetailUI(f) {
+  document.getElementById('detailName').textContent = f.name;
+  const b = document.getElementById('detailBadge');
+  b.className = 'badge badge-' + (f.valid?'ok':'err');
+  b.textContent = f.valid?'✓ valid':'✗ invalid';
+  ['editBtn','cancelBtn','validateEditBtn','saveBtn','copyBtn'].forEach(id=>
+    document.getElementById(id).style.display='none');
+  document.getElementById('detailBox').style.display='';
+  document.getElementById('editArea').style.display='none';
+  document.getElementById('editStatus').style.display='none';
+  document.getElementById('editCharCount').style.display='none';
+  document.getElementById('detailNotice').innerHTML='';
+  document.getElementById('detailBox').innerHTML='';
+  document.getElementById('detailInfo').textContent='';
+  fvCopyCache='';
+}
+
+function renderLocalFile(f) {
+  const nb=document.getElementById('detailNotice'), box=document.getElementById('detailBox');
+  if (f.valid&&f.formatted) {
+    box.innerHTML=syntaxHL(f.formatted);
+    document.getElementById('detailInfo').textContent=`${f.formatted.split('\n').length} lines · ${fmtSize(f.size)}`;
+    fvCopyCache=f.formatted;
+    document.getElementById('editBtn').style.display=document.getElementById('copyBtn').style.display='inline-flex';
+  } else {
+    const ed=f.errorDetail;
+    nb.innerHTML=`<div class="alert alert-err">❌ ${esc(f.error||'Invalid JSON')}${ed?` — Line ${ed.line}, Col ${ed.col}`:''}${ed?.context?`<pre class="err-context" style="margin-top:8px;">${esc(ed.context)}</pre>`:''}</div>`;
+    box.innerHTML=`<div style="padding:4px 0 2px;font-family:var(--mono);font-size:10px;color:var(--muted);">Raw content:</div><div style="white-space:pre-wrap;font-family:var(--mono);font-size:11px;">${esc(f.content||'')}</div>`;
+    document.getElementById('detailInfo').textContent=fmtSize(f.size);
+    document.getElementById('editBtn').style.display='inline-flex';
+  }
+}
+
+async function renderServerFile(f) {
+  const box=document.getElementById('detailBox');
+  box.innerHTML='<div class="empty-state"><div class="spinner"></div></div>';
+  try {
+    const res=await fetch(`${API}/files/${encodeURIComponent(f.name)}`);
+    const data=await res.json();
+    if (data.valid) {
+      box.innerHTML=syntaxHL(data.formattedJson);
+      document.getElementById('detailInfo').textContent=`${data.lineCount} lines`;
+      fvCopyCache=data.formattedJson;
+      document.getElementById('copyBtn').style.display=document.getElementById('editBtn').style.display='inline-flex';
+    } else {
+      document.getElementById('detailNotice').innerHTML=`<div class="alert alert-err">❌ ${esc(data.message)}${data.errorDetail?' — '+esc(data.errorDetail):''}</div>`;
+      document.getElementById('editBtn').style.display='inline-flex';
+      fvCurrentFile={...f,content:data.errorDetail||'',formatted:null};
+    }
+  } catch(e) { box.innerHTML=`<div class="err-box">${esc(e.message)}</div>`; }
+}
+
+function closeDetail(silent=false) {
+  fvEditMode=false; fvEditValid=false;
+  document.getElementById('detailView').style.display='none';
+  document.getElementById('detailView').classList.remove('open');
+  document.getElementById('listView').style.display='flex';
+}
+
+/* ── Edit mode ── */
+function enterEdit() {
+  fvEditMode=true; fvEditValid=false;
+  const ta=document.getElementById('editArea');
+  ta.value=fvCurrentFile.formatted||fvCurrentFile.content||'';
+  document.getElementById('detailBox').style.display='none';
+  ta.style.display='block';
+  document.getElementById('editBtn').style.display=document.getElementById('copyBtn').style.display='none';
+  document.getElementById('cancelBtn').style.display=document.getElementById('validateEditBtn').style.display='inline-flex';
+  document.getElementById('saveBtn').style.display='none';
+  document.getElementById('editStatus').style.display=document.getElementById('editCharCount').style.display='inline';
+  updateEditStatus('idle'); updateCharCount(ta.value); ta.focus();
+}
+
+function cancelEdit() {
+  fvEditMode=false; fvEditValid=false;
+  document.getElementById('editArea').style.display='none';
+  document.getElementById('detailBox').style.display='';
+  ['cancelBtn','validateEditBtn','saveBtn'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('editStatus').style.display=document.getElementById('editCharCount').style.display='none';
+  document.getElementById('detailNotice').innerHTML='';
+  if (fvCurrentFile.source==='local') renderLocalFile(fvCurrentFile);
+  else renderServerFile(fvCurrentFile);
+}
+
+function onEditInput() {
+  updateCharCount(document.getElementById('editArea').value);
+  if (fvEditValid) { fvEditValid=false; document.getElementById('saveBtn').style.display='none'; updateEditStatus('idle'); }
+}
+
+function updateCharCount(text) {
+  document.getElementById('editCharCount').textContent=`${text.split('\n').length} lines · ${text.length.toLocaleString()} chars`;
+}
+function updateEditStatus(state,msg) {
+  const el=document.getElementById('editStatus');
+  if (state==='idle') { el.style.color='var(--muted)'; el.textContent='— validate before save'; }
+  else if (state==='ok') { el.style.color='var(--green)'; el.textContent='✓ valid — ready to save'; }
+  else { el.style.color='var(--red)'; el.textContent='✗ '+(msg||'invalid JSON'); }
+}
+
+function validateEdit() {
+  const raw=document.getElementById('editArea').value;
+  const nb=document.getElementById('detailNotice');
+  try {
+    const pretty=JSON.stringify(JSON.parse(raw),null,2);
+    document.getElementById('editArea').value=pretty;
+    updateCharCount(pretty);
+    fvEditValid=true; fvCopyCache=pretty;
+    document.getElementById('saveBtn').style.display='inline-flex';
+    updateEditStatus('ok');
+    nb.innerHTML=`<div class="alert alert-ok">✅ JSON ถูกต้อง — กด 💾 Save เพื่อดาวน์โหลด</div>`;
+  } catch(ex) {
+    fvEditValid=false; document.getElementById('saveBtn').style.display='none';
+    const ed=parseJSONError(ex.message,raw);
+    updateEditStatus('err',ex.message);
+    nb.innerHTML=`<div class="alert alert-err">❌ ${esc(ex.message)}${ed?` — Line ${ed.line}, Col ${ed.col}`:''}${ed?.context?`<pre class="err-context" style="margin-top:8px;">${esc(ed.context)}</pre>`:''}</div>`;
+    if(ed) highlightLine(ed.line);
+  }
+}
+
+function highlightLine(lineNum) {
+  const ta=document.getElementById('editArea');
+  const lines=ta.value.split('\n');
+  let pos=0;
+  for(let i=0;i<Math.min(lineNum-1,lines.length);i++) pos+=lines[i].length+1;
+  ta.focus(); ta.setSelectionRange(pos,pos+(lines[lineNum-1]||'').length);
+}
+
+function saveFile() {
+  if(!fvEditValid||!fvCopyCache){showToast('⚠ validate first',true);return;}
+  const fname=fvCurrentFile?.name||'output.json';
+  const a=Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(new Blob([fvCopyCache],{type:'application/json'})),download:fname
+  });
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+
+  if(fvCurrentFile?.source==='local'){
+    Object.assign(fvCurrentFile,{formatted:fvCopyCache,content:fvCopyCache,valid:true,error:null,errorDetail:null});
+    const idx=fvAllFiles.findIndex(x=>x.relPath===fvCurrentFile.relPath);
+    if(idx!==-1) fvAllFiles[idx]={...fvCurrentFile};
+    renderSummary();
+  }
+  showToast(`✓ Saved "${fname}"`);
+
+  fvEditMode=false;fvEditValid=false;
+  document.getElementById('editArea').style.display='none';
+  document.getElementById('detailBox').style.display='';
+  ['cancelBtn','validateEditBtn','saveBtn'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('editStatus').style.display=document.getElementById('editCharCount').style.display='none';
+  document.getElementById('detailNotice').innerHTML='';
+
+  const badge=document.getElementById('detailBadge');
+  badge.className='badge badge-ok';badge.textContent='✓ valid';
+  document.getElementById('detailBox').innerHTML=syntaxHL(fvCopyCache);
+  document.getElementById('detailInfo').textContent=`${fvCopyCache.split('\n').length} lines`;
+  document.getElementById('editBtn').style.display=document.getElementById('copyBtn').style.display='inline-flex';
+}
+
+function copyContent() {
+  if(!fvCopyCache)return;
+  navigator.clipboard.writeText(fvCopyCache).then(()=>showToast('✓ Copied'));
+}
+
+/* ── Helpers ── */
+function showLoading() {
+  document.getElementById('listArea').innerHTML='<div class="empty-state"><div class="spinner"></div><div>Loading…</div></div>';
+  document.getElementById('summaryRow').style.display='none';
+}
+function showEmpty(msg) {
+  document.getElementById('listArea').innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><div>${esc(msg)}</div></div>`;
+  document.getElementById('summaryRow').style.display='none';
+}
+function fmtSize(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escA(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function showToast(msg,isErr=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(isErr?' err':'');
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+}
+function syntaxHL(json){
+  return esc(json).replace(
+    /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?|[{}\[\],:])/g,
+    m=>{
+      if(/^"/.test(m))return/:$/.test(m)?`<span class="j-key">${m}</span>`:`<span class="j-str">${m}</span>`;
+      if(/true|false/.test(m))return`<span class="j-bool">${m}</span>`;
+      if(/null/.test(m))return`<span class="j-null">${m}</span>`;
+      if(/[{}\[\]]/.test(m))return`<span class="j-pun">${m}</span>`;
+      if(/,/.test(m))return`<span class="j-pun">${m}</span>`;
+      return`<span class="j-num">${m}</span>`;
+    }
+  );
+}
+
+/* ── Init ── */
+setSource('server');
+</script>
+</body>
+</html>
