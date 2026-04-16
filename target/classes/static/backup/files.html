@@ -529,11 +529,6 @@ function closeDetail(silent=false) {
   document.getElementById('detailView').style.display='none';
   document.getElementById('detailView').classList.remove('open');
   document.getElementById('listView').style.display='flex';
-  
-  if (!silent) {
-    renderSummary();
-    renderList();
-  }
 }
 
 /* ── Edit mode ── */
@@ -579,40 +574,24 @@ function updateEditStatus(state,msg) {
   else { el.style.color='var(--red)'; el.textContent='✗ '+(msg||'invalid JSON'); }
 }
 
-async function validateEdit() {
-  const json = document.getElementById('editArea').value;
-  const nb = document.getElementById('detailNotice');
+function validateEdit() {
+  const raw=document.getElementById('editArea').value;
+  const nb=document.getElementById('detailNotice');
   try {
-    const res = await fetch(API + '/validate', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ json })
-    });
-    const data = await res.json();
-    if (data.valid) {
-      document.getElementById('editArea').value = data.formattedJson;
-      updateCharCount(data.formattedJson);
-      fvEditValid=true; fvCopyCache=data.formattedJson;
-      clearErrOverlay();
-      document.getElementById('saveBtn').style.display='inline-flex';
-      updateEditStatus('ok');
-      nb.innerHTML=`<div class="alert alert-ok">✅ JSON ถูกต้อง — กด 💾 Save เพื่อดาวน์โหลด</div>`;
-    } else {
-      fvEditValid=false; document.getElementById('saveBtn').style.display='none';
-      updateEditStatus('err', data.message);
-      
-      let highlightLineNum = 0;
-      if (data.errorDetail) {
-         const lm = data.errorDetail.match(/Line (\d+)/i);
-         if (lm) highlightLineNum = parseInt(lm[1]);
-      }
-      
-      nb.innerHTML=`<div class="alert alert-err">❌ ${esc(data.message)}${data.errorDetail?' — '+esc(data.errorDetail):''}</div>`;
-      if (highlightLineNum) highlightLine(highlightLineNum);
-    }
+    const pretty=JSON.stringify(JSON.parse(raw),null,2);
+    document.getElementById('editArea').value=pretty;
+    updateCharCount(pretty);
+    fvEditValid=true; fvCopyCache=pretty;
+    clearErrOverlay();
+    document.getElementById('saveBtn').style.display='inline-flex';
+    updateEditStatus('ok');
+    nb.innerHTML=`<div class="alert alert-ok">✅ JSON ถูกต้อง — กด 💾 Save เพื่อดาวน์โหลด</div>`;
   } catch(ex) {
     fvEditValid=false; document.getElementById('saveBtn').style.display='none';
-    updateEditStatus('err', ex.message);
-    nb.innerHTML=`<div class="alert alert-err">❌ Cannot connect to server</div>`;
+    const ed=parseJSONError(ex.message,raw);
+    updateEditStatus('err',ex.message);
+    nb.innerHTML=`<div class="alert alert-err">❌ ${esc(ex.message)}${ed?` — Line ${ed.line}, Col ${ed.col}`:''}${ed?.context?`<pre class="err-context" style="margin-top:8px;">${esc(ed.context)}</pre>`:''}</div>`;
+    if(ed) highlightLine(ed.line);
   }
 }
 
@@ -696,10 +675,10 @@ function saveFile() {
   });
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 
-  if (fvCurrentFile) {
-    Object.assign(fvCurrentFile, { formatted: fvCopyCache, content: fvCopyCache, valid: true, error: null, errorDetail: null });
-    const idx = fvAllFiles.findIndex(x => x.relPath === fvCurrentFile.relPath);
-    if (idx !== -1) fvAllFiles[idx] = { ...fvCurrentFile };
+  if(fvCurrentFile?.source==='local'){
+    Object.assign(fvCurrentFile,{formatted:fvCopyCache,content:fvCopyCache,valid:true,error:null,errorDetail:null});
+    const idx=fvAllFiles.findIndex(x=>x.relPath===fvCurrentFile.relPath);
+    if(idx!==-1) fvAllFiles[idx]={...fvCurrentFile};
     renderSummary();
   }
   showToast(`✓ Saved "${fname}"`);

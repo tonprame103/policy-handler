@@ -23,7 +23,7 @@
 /* File info strip */
 .file-info-strip {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 8px 12px; border-radius: var(--r);
+  padding: 8px 14px; border-radius: var(--r);
   background: var(--bg2); border: 1px solid var(--border);
   font-family: var(--mono); font-size: 11px;
 }
@@ -32,10 +32,134 @@
 
 /* Folder status */
 .folder-card-inner { pointer-events: none; }
-.fc-icon { font-size: 2rem; }
-.fc-name { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text); }
-.fc-status { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.fc-icon { font-size: 1.8rem; }
+.fc-name { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text2); }
+.fc-status { font-family: var(--sans); font-size: 12px; color: var(--muted); }
 .fc-status.ok { color: var(--green); }
+
+/* ── Tabs ── */
+.view-tabs {
+  display: flex; gap: 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+  padding: 0 2px;
+}
+.view-tab {
+  font-family: var(--sans); font-size: 12px; font-weight: 500;
+  padding: 8px 16px; cursor: pointer;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--r) var(--r) 0 0;
+  color: var(--muted);
+  transition: all 0.12s;
+  background: transparent;
+  margin-bottom: -1px;
+}
+.view-tab:hover { color: var(--text2); background: var(--bg2); }
+.view-tab.active {
+  color: var(--accent);
+  border-color: var(--border);
+  background: var(--bg1);
+  border-bottom-color: var(--bg1);
+}
+.view-pane { display: none; }
+.view-pane.active { display: block; }
+
+/* ── Tree diagram ── */
+.tree-wrap {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 0 var(--r2) var(--r2) var(--r2); padding: 22px 26px;
+  font-family: var(--mono); font-size: 12px;
+  overflow-x: auto; min-height: 160px;
+}
+.tree-node {
+  display: flex; flex-direction: column; position: relative;
+}
+.tree-node-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 0;
+}
+.tree-connector {
+  display: flex; flex-direction: column; align-items: flex-start;
+  margin-left: 20px; padding-left: 16px;
+  border-left: 1.5px solid var(--border2);
+  position: relative;
+}
+.tree-connector-item {
+  display: flex; align-items: flex-start; gap: 0;
+  position: relative;
+}
+.tree-connector-item::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 1.5px;
+  background: var(--border2);
+  margin-top: 12px;
+  flex-shrink: 0;
+}
+.tree-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 13px; border-radius: 20px;
+  font-size: 11.5px; font-weight: 600; font-family: var(--sans);
+  white-space: nowrap;
+}
+.tree-pill-root {
+  background: var(--amber-bg); color: var(--amber);
+  border: 1.5px solid rgba(176,124,42,0.3);
+  font-size: 13px; padding: 6px 18px;
+}
+.tree-pill-set {
+  background: var(--accent-bg); color: var(--accent);
+  border: 1.5px solid rgba(79,99,210,0.3);
+}
+.tree-pill-group {
+  background: var(--cyan-bg); color: var(--cyan);
+  border: 1.5px solid rgba(26,123,140,0.3);
+}
+.tree-pill-rule {
+  background: var(--green-bg); color: var(--green);
+  border: 1.5px solid rgba(45,125,82,0.25);
+}
+.tree-pill-link {
+  cursor: pointer; transition: all 0.12s;
+}
+.tree-pill-link:hover {
+  opacity: 0.85; transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+.tree-pill-missing {
+  background: var(--red-bg); color: var(--red);
+  border: 1.5px dashed rgba(192,57,43,0.35);
+  opacity: 0.75;
+}
+.tree-type-label {
+  font-size: 9px; color: var(--dim); letter-spacing: 0.07em;
+  text-transform: uppercase; margin-bottom: 2px; font-family: var(--sans);
+}
+.tree-level-wrap {
+  display: flex; flex-direction: column;
+}
+.tree-loading {
+  color: var(--muted); font-size: 12px;
+  display: flex; align-items: center; gap: 8px; padding: 14px 0;
+  font-family: var(--sans);
+}
+.tree-empty {
+  color: var(--dim); font-size: 12px; padding: 28px 0; text-align: center;
+  font-family: var(--sans);
+}
+
+/* search type indicator */
+.search-type-chip {
+  display: none; align-items: center; gap: 5px;
+  font-family: var(--sans); font-size: 11px; font-weight: 500;
+  padding: 4px 10px; border-radius: 20px;
+  background: var(--accent-bg); color: var(--accent);
+  border: 1px solid rgba(79,99,210,0.2);
+  white-space: nowrap;
+}
+.search-type-chip.visible { display: inline-flex; }
 </style>
 </head>
 <body>
@@ -100,11 +224,14 @@
 
   <!-- Step 2: Search -->
   <div class="card-block">
-    <div class="card-block-title">🔍 Step 2 — ค้นหา Policy Spec</div>
+    <div class="card-block-title">🔍 Step 2 — ค้นหา Policy (Spec / Set / Group / Rule)</div>
     <div class="search-row">
       <input class="text-input" id="pmSearch" type="text"
-        placeholder="ชื่อไฟล์ PolicySpec เช่น MySpec หรือ MySpec.json"
-        onkeydown="if(event.key==='Enter')pmDoSearch()" style="flex:1;">
+        placeholder="ชื่อ Policy เช่น MySpec · PLSE_MySet · PLGP_MyGroup · PLRL_MyRule"
+        onkeydown="if(event.key==='Enter')pmDoSearch()"
+        oninput="pmUpdateChip(this.value)"
+        style="flex:1;">
+      <span class="search-type-chip" id="pmTypeChip"></span>
       <button class="btn btn-primary" onclick="pmDoSearch()">🔍 Search</button>
       <button class="btn" onclick="pmClear()">Clear</button>
     </div>
@@ -116,7 +243,24 @@
     <div class="breadcrumb" id="pmBreadcrumb"></div>
     <div class="file-info-strip" id="pmFileInfo"></div>
     <div id="pmNotice"></div>
-    <div class="json-viewer" id="pmJsonViewer"></div>
+
+    <!-- Tabs -->
+    <div class="view-tabs">
+      <button class="view-tab active" id="tab-tree" onclick="switchTab('tree')">🌳 Tree Diagram</button>
+      <button class="view-tab"        id="tab-json" onclick="switchTab('json')">{ } JSON Viewer</button>
+    </div>
+
+    <!-- Tree pane -->
+    <div class="view-pane active" id="pane-tree">
+      <div class="tree-wrap" id="pmTree">
+        <div class="tree-empty">ยังไม่มีข้อมูล</div>
+      </div>
+    </div>
+
+    <!-- JSON pane -->
+    <div class="view-pane" id="pane-json">
+      <div class="json-viewer" id="pmJsonViewer"></div>
+    </div>
   </div>
 
 </div>
@@ -128,7 +272,31 @@
 /* ── STATE ── */
 const pmFolders = { common: {}, activity: {} };
 const pmReady   = { common: false, activity: false };
-const pmBC      = [];  // { label, type, source, fileKey }
+const pmBC      = [];   // { label, type, source, fileKey }
+
+/* ─────────────────────────────────────────────
+   TYPE DETECTION from search input prefix
+   PLSE → Set  |  PLGP → Group  |  PLRL → Rule
+   (anything else) → Spec
+───────────────────────────────────────────── */
+function detectType(raw) {
+  const u = raw.toUpperCase();
+  if (u.startsWith('PLSE')) return 'Set';
+  if (u.startsWith('PLGP')) return 'Group';
+  if (u.startsWith('PLRL')) return 'Rule';
+  return 'Spec';
+}
+
+/* ─── Chip label update (live) ─── */
+function pmUpdateChip(val) {
+  const t = val.trim();
+  const chip = document.getElementById('pmTypeChip');
+  if (!t) { chip.textContent=''; chip.classList.remove('visible'); return; }
+  const type = detectType(t);
+  const icons = { Spec:'📋 PolicySpec', Set:'📄 PolicySet', Group:'📂 PolicyGroup', Rule:'📏 PolicyRule' };
+  chip.textContent = icons[type];
+  chip.classList.add('visible');
+}
 
 /* ── Load folder ── */
 function pmLoadFolder(src, input) {
@@ -172,51 +340,82 @@ function pmLoadFolder(src, input) {
 const pmNorm = p => p.replace(/\\/g,'/').toLowerCase();
 
 /* ── Find file ── */
-function pmFind(src, candidates, typeHint) {
+function pmFind(src, candidates) {
   const store = pmFolders[src];
   const keys  = Object.keys(store);
 
-  // 1. exact
+  // 1. exact match
   for (const c of candidates) {
     const nc = pmNorm(c);
-    for (const k of keys) if (pmNorm(k)===nc) return { key:k, ...store[k] };
+    for (const k of keys) if (pmNorm(k) === nc) return { key:k, ...store[k] };
   }
-  // 2. ends-with
+  // 2. ends-with path
   for (const c of candidates) {
     const nc = pmNorm(c);
-    for (const k of keys) if (pmNorm(k).endsWith('/'+nc)||pmNorm(k).endsWith(nc)) return { key:k, ...store[k] };
+    for (const k of keys) {
+      const nk = pmNorm(k);
+      if (nk.endsWith('/'+nc) || nk === nc) return { key:k, ...store[k] };
+    }
   }
-  // 3. filename + type hint
-  const tgt = pmNorm(candidates[0].split('/').pop());
-  const th  = typeHint ? typeHint.toLowerCase() : '';
-  for (const k of keys) {
-    const nk = pmNorm(k);
-    if (nk.split('/').pop()===tgt && (!th || nk.includes('/'+th+'/'))) return { key:k, ...store[k] };
-  }
-  // 3b. filename only
-  for (const k of keys) if (pmNorm(k).split('/').pop()===tgt) return { key:k, ...store[k] };
+  // 3. just filename
+  const tgtName = pmNorm(candidates[0].split('/').pop().split('\\').pop());
+  for (const k of keys) if (pmNorm(k).split('/').pop() === tgtName) return { key:k, ...store[k] };
   return null;
 }
 
-/* ── Candidates ── */
+/* ─────────────────────────────────────────────
+   CANDIDATES — per type, correct folder paths
+   Spec  : CFS/Policy/Spec, RFS/Policy/Spec, Policy/Spec
+   Set   : Policy/Set
+   Group : Policy/Group
+   Rule  : Policy/Rule
+───────────────────────────────────────────── */
 function pmCandidates(type, fname) {
-  const f = fname.endsWith('.json') ? fname : fname+'.json';
+  const f = fname.endsWith('.json') ? fname : fname + '.json';
   const paths = [];
-  ['CFS','RFS'].forEach(sf => {
-    paths.push(`${sf}/Policy/${type}/${f}`);
-    paths.push(`${sf}/Policy/${type.toLowerCase()}/${f}`);
-  });
-  paths.push(`Policy/${type}/${f}`);
-  paths.push(`Policy/${type.toLowerCase()}/${f}`);
-  paths.push(f);
+
+  if (type === 'Spec') {
+    ['CFS', 'RFS'].forEach(sf => {
+      paths.push(`${sf}/Policy/Spec/${f}`);
+      paths.push(`${sf}/Policy/spec/${f}`);
+    });
+    paths.push(`Policy/Spec/${f}`);
+    paths.push(`Policy/spec/${f}`);
+    paths.push(f);
+  } else if (type === 'Set') {
+    paths.push(`Policy/Set/${f}`);
+    paths.push(`Policy/set/${f}`);
+    ['CFS', 'RFS'].forEach(sf => {
+      paths.push(`${sf}/Policy/Set/${f}`);
+    });
+    paths.push(f);
+  } else if (type === 'Group') {
+    paths.push(`Policy/Group/${f}`);
+    paths.push(`Policy/group/${f}`);
+    ['CFS', 'RFS'].forEach(sf => {
+      paths.push(`${sf}/Policy/Group/${f}`);
+    });
+    paths.push(f);
+  } else if (type === 'Rule') {
+    paths.push(`Policy/Rule/${f}`);
+    paths.push(`Policy/rule/${f}`);
+    ['CFS', 'RFS'].forEach(sf => {
+      paths.push(`${sf}/Policy/Rule/${f}`);
+    });
+    paths.push(f);
+  }
   return paths;
 }
 
-/* ── Search ── */
+/* ─────────────────────────────────────────────
+   SEARCH — with prefix-based type detection
+───────────────────────────────────────────── */
 function pmDoSearch() {
-  const raw = document.getElementById('pmSearch').value.trim();
+  const raw   = document.getElementById('pmSearch').value.trim();
   if (!raw) return;
-  const fname = raw.endsWith('.json') ? raw : raw+'.json';
+
+  const type  = detectType(raw);
+  const fname = raw.endsWith('.json') ? raw : raw + '.json';
   const res   = document.getElementById('pmSearchResult');
 
   const cc = Object.keys(pmFolders.common).length;
@@ -224,12 +423,14 @@ function pmDoSearch() {
   if (!cc && !ac) { res.innerHTML=`<div class="alert alert-err">⚠ กรุณา browse folder ก่อน</div>`; return; }
   if (!pmReady.common && !pmReady.activity) { res.innerHTML=`<div class="alert alert-inf"><span class="spinner"></span> Loading…</div>`; return; }
 
-  res.innerHTML=`<div class="alert alert-inf"><span class="spinner"></span> Searching "${esc(fname)}"…</div>`;
+  res.innerHTML=`<div class="alert alert-inf"><span class="spinner"></span> Searching "${esc(fname)}" as Policy${type}…</div>`;
 
   setTimeout(() => {
     let found=null, foundSrc=null;
-    for (const src of ['common','activity']) {
-      const r = pmFind(src, pmCandidates('Spec', fname), 'Spec');
+    const cands = pmCandidates(type, fname);
+
+    for (const src of ['common', 'activity']) {
+      const r = pmFind(src, cands);
       if (r) { found=r; foundSrc=src; break; }
     }
 
@@ -240,9 +441,9 @@ function pmDoSearch() {
         if (pmNorm(k).includes(nf.replace('.json',''))) hints.push(`[${s}] ${k}`);
       }));
       const hint = hints.length
-        ? `<small style="color:var(--muted)">Similar: ${hints.map(h=>esc(h)).join(', ')}</small>`
-        : `<small style="color:var(--muted)">Common: ${cc} | Activity: ${ac} files</small>`;
-      res.innerHTML=`<div class="alert alert-err">❌ ไม่พบ "${esc(fname)}"<br>${hint}</div>`;
+        ? `<small style="color:var(--muted)">Similar: ${hints.slice(0,5).map(h=>esc(h)).join(', ')}</small>`
+        : `<small style="color:var(--muted)">Common: ${cc} | Activity: ${ac} files loaded</small>`;
+      res.innerHTML=`<div class="alert alert-err">❌ ไม่พบ "${esc(fname)}" (Policy${type})<br>${hint}</div>`;
       return;
     }
 
@@ -252,24 +453,36 @@ function pmDoSearch() {
       <span class="badge ${badgeCls}">${srcLabel}</span> &nbsp;
       <span style="color:var(--muted);font-size:10px;">${esc(found.key)}</span></div>`;
 
-    pmBC.length=0;
-    pmBC.push({ label:found.name, type:'Spec', source:foundSrc, fileKey:found.key });
-    pmRender('Spec', found, foundSrc);
+    pmBC.length = 0;
+    pmBC.push({ label: found.name, type, source: foundSrc, fileKey: found.key });
+    pmRender(type, found, foundSrc);
   }, 60);
 }
 
 function pmClear() {
-  document.getElementById('pmSearch').value='';
-  document.getElementById('pmSearchResult').innerHTML='';
-  document.getElementById('pmViewer').style.display='none';
+  document.getElementById('pmSearch').value = '';
+  document.getElementById('pmSearchResult').innerHTML = '';
+  document.getElementById('pmViewer').style.display = 'none';
   document.getElementById('pmViewer').classList.remove('open');
-  pmBC.length=0;
+  document.getElementById('pmTypeChip').classList.remove('visible');
+  pmBC.length = 0;
 }
 
-/* ── Render viewer ── */
+/* ─────────────────────────────────────────────
+   TAB SWITCH
+───────────────────────────────────────────── */
+function switchTab(name) {
+  document.querySelectorAll('.view-tab,.view-pane').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.getElementById('pane-'+name).classList.add('active');
+}
+
+/* ─────────────────────────────────────────────
+   RENDER VIEWER
+───────────────────────────────────────────── */
 function pmRender(type, fileObj, src) {
   const viewer = document.getElementById('pmViewer');
-  viewer.style.display='flex'; viewer.classList.add('open');
+  viewer.style.display = 'flex'; viewer.classList.add('open');
 
   pmRenderBC();
 
@@ -279,7 +492,7 @@ function pmRender(type, fileObj, src) {
     <span class="fi-name">📄 ${esc(fileObj.name)}</span>
     <span class="fi-path">${esc(fileObj.key)}</span>
     <span class="badge ${bcls}">${srcLabel}</span>
-    <span class="badge badge-neu" style="text-transform:uppercase;font-size:9px;">${type}</span>
+    <span class="badge badge-neu" style="text-transform:uppercase;font-size:9px;">Policy${type}</span>
   `;
 
   const notice = document.getElementById('pmNotice');
@@ -287,95 +500,204 @@ function pmRender(type, fileObj, src) {
 
   if (!fileObj.parsed) {
     notice.innerHTML=`<div class="alert alert-err">⚠ ไม่สามารถ parse JSON ได้</div>`;
-    jv.textContent = fileObj.content||'';
+    jv.textContent = fileObj.content || '';
+    pmRenderTree(type, null, src);
     return;
   }
 
-  let html='', noteHtml='';
-
-  if (type==='Spec') {
+  // ── JSON Viewer ──
+  let html = '', noteHtml = '';
+  if (type === 'Spec') {
     const ids = pmCollect(fileObj.parsed, 'policySetId');
-    if (ids.length) noteHtml=`<div class="alert alert-inf">🔗 พบ <strong>policySetId</strong> ${ids.length} รายการ — คลิกเพื่อเปิด PolicySet</div>`;
-    html = pmRenderJson(fileObj.parsed, (key,val) => {
-      if (key==='policySetId'&&typeof val==='string')
+    if (ids.length) noteHtml=`<div class="alert alert-inf">🔗 พบ <strong>policySetId</strong> ${ids.length} รายการ — คลิก value เพื่อเปิด PolicySet</div>`;
+    html = pmRenderJson(fileObj.parsed, (key, val) => {
+      if (key==='policySetId' && typeof val==='string')
         return `<span class="j-link" onclick="pmOpenLinked('Set','${escA(val)}','${escA(src)}')">${esc(val)}</span>`;
       return null;
     });
-  } else if (type==='Set') {
+  } else if (type === 'Set') {
     const ids = pmCollectIn(fileObj.parsed,'policyGroup','id');
-    if (ids.length) noteHtml=`<div class="alert alert-inf">🔗 พบ <strong>policyGroup.id</strong> ${ids.length} รายการ — คลิกเพื่อเปิด PolicyGroup</div>`;
-    html = pmRenderJson(fileObj.parsed, (key,val,pk) => {
-      if (key==='id'&&pk==='policyGroup'&&typeof val==='string')
+    if (ids.length) noteHtml=`<div class="alert alert-inf">🔗 พบ <strong>policyGroup.id</strong> ${ids.length} รายการ — คลิก value เพื่อเปิด PolicyGroup</div>`;
+    html = pmRenderJson(fileObj.parsed, (key, val, pk) => {
+      if (key==='id' && pk==='policyGroup' && typeof val==='string')
         return `<span class="j-link" onclick="pmOpenLinked('Group','${escA(val)}','${escA(src)}')">${esc(val)}</span>`;
       return null;
     });
-  } else if (type==='Group') {
+  } else if (type === 'Group') {
     const ids = pmCollectIn(fileObj.parsed,'policyRule','id');
-    if (ids.length) noteHtml=`<div class="alert alert-inf">🔗 พบ <strong>policyRule.id</strong> ${ids.length} รายการ — คลิกเพื่อเปิด PolicyRule</div>`;
-    html = pmRenderJson(fileObj.parsed, (key,val,pk) => {
-      if (key==='id'&&pk==='policyRule'&&typeof val==='string')
+    if (ids.length) noteHtml=`<div class="alert alert-inf">🔗 พบ <strong>policyRule.id</strong> ${ids.length} รายการ — คลิก value เพื่อเปิด PolicyRule</div>`;
+    html = pmRenderJson(fileObj.parsed, (key, val, pk) => {
+      if (key==='id' && pk==='policyRule' && typeof val==='string')
         return `<span class="j-link" onclick="pmOpenLinked('Rule','${escA(val)}','${escA(src)}')">${esc(val)}</span>`;
       return null;
     });
   } else {
-    html = pmRenderJson(fileObj.parsed, ()=>null);
+    html = pmRenderJson(fileObj.parsed, () => null);
   }
 
   notice.innerHTML = noteHtml;
-  jv.innerHTML = html;
+  jv.innerHTML     = html;
+
+  // ── Tree ──
+  pmRenderTree(type, fileObj.parsed, src, fileObj.name);
+
   viewer.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ─────────────────────────────────────────────
+   TREE DIAGRAM
+───────────────────────────────────────────── */
+function pmRenderTree(type, parsed, src, rootName) {
+  const wrap = document.getElementById('pmTree');
+
+  if (!parsed) {
+    wrap.innerHTML = `<div class="tree-empty">⚠ ไม่สามารถ parse JSON ได้</div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<div class="tree-loading"><span class="spinner"></span> กำลังสร้าง Tree…</div>`;
+
+  setTimeout(() => {
+    wrap.innerHTML = buildTree(type, parsed, src, rootName || '');
+  }, 40);
+}
+
+/* Build HTML tree */
+function buildTree(type, parsed, src, rootName) {
+  // root pill
+  const icons = { Spec:'📋', Set:'📄', Group:'📂', Rule:'📏' };
+  const rootClass = { Spec:'tree-pill-root', Set:'tree-pill-set', Group:'tree-pill-group', Rule:'tree-pill-rule' };
+  const icon = icons[type] || '📄';
+  const rc   = rootClass[type] || 'tree-pill-root';
+
+  let html = `<div class="tree-node">`;
+  html += `
+    <div class="tree-type-label">${type.toUpperCase()}</div>
+    <div class="tree-node-row">
+      <span class="tree-pill ${rc}">${icon} ${esc(rootName)}</span>
+    </div>`;
+
+  if (type === 'Spec') {
+    const setIds = pmCollect(parsed, 'policySetId');
+    if (setIds.length) {
+      html += buildChildBranch('Set', setIds, src, 'tree-pill-set', '📄', 'policySetId');
+    }
+  } else if (type === 'Set') {
+    const groupIds = pmCollectIn(parsed, 'policyGroup', 'id');
+    if (groupIds.length) {
+      html += buildChildBranch('Group', groupIds, src, 'tree-pill-group', '📂', 'policyGroup.id');
+    }
+  } else if (type === 'Group') {
+    const ruleIds = pmCollectIn(parsed, 'policyRule', 'id');
+    if (ruleIds.length) {
+      html += buildChildBranch('Rule', ruleIds, src, 'tree-pill-rule', '📏', 'policyRule.id');
+    }
+  } else if (type === 'Rule') {
+    html += `
+      <div class="tree-connector">
+        <div class="tree-connector-item">
+          <div class="tree-level-wrap">
+            <div class="tree-type-label" style="margin-left:4px;">LEAF NODE</div>
+            <div class="tree-node-row">
+              <span class="tree-pill" style="background:rgba(74,86,128,0.12);color:var(--muted);border:1.5px dashed var(--border2);">
+                ⬛ PolicyRule ไม่มี child
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+function buildChildBranch(childType, ids, src, pillCls, icon, fieldLabel) {
+  let html = `<div class="tree-connector">`;
+  ids.forEach(id => {
+    const fname  = id.endsWith('.json') ? id : id + '.json';
+    const cands  = pmCandidates(childType, fname);
+    let found    = null, foundSrc = null;
+    for (const s of ['common', 'activity']) {
+      const r = pmFind(s, cands);
+      if (r) { found = r; foundSrc = s; break; }
+    }
+
+    const srcTag = found
+      ? `<span style="font-size:9px;opacity:0.7;margin-left:6px;">${foundSrc==='common'?'Common':'Activity'}</span>`
+      : '';
+    const pill = found
+      ? `<span class="tree-pill ${pillCls} tree-pill-link"
+              onclick="pmOpenLinked('${escA(childType)}','${escA(id)}','${escA(src)}')"
+              title="คลิกเพื่อเปิด Policy${childType}: ${escA(id)}">
+            ${icon} ${esc(id)}${srcTag}
+          </span>`
+      : `<span class="tree-pill tree-pill-missing" title="ไม่พบไฟล์นี้">
+            ${icon} ${esc(id)} <small style="font-size:9px;">(ไม่พบ)</small>
+          </span>`;
+
+    html += `
+      <div class="tree-connector-item">
+        <div class="tree-level-wrap">
+          <div class="tree-type-label" style="margin-left:4px;">${childType.toUpperCase()}</div>
+          <div class="tree-node-row">${pill}</div>
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+  return html;
 }
 
 /* ── Open linked ── */
 function pmOpenLinked(type, id, preferSrc) {
-  const fname = id.endsWith('.json') ? id : id+'.json';
-  const cands = pmCandidates(type, fname);
-  let found=null, foundSrc=null;
-  for (const src of ['common','activity']) {
-    const r=pmFind(src,cands,type);
-    if(r){found=r;foundSrc=src;break;}
+  const fname  = id.endsWith('.json') ? id : id + '.json';
+  const cands  = pmCandidates(type, fname);
+  let found = null, foundSrc = null;
+  for (const src of ['common', 'activity']) {
+    const r = pmFind(src, cands);
+    if (r) { found=r; foundSrc=src; break; }
   }
-  if (!found) { showToast(`❌ ไม่พบ Policy${type}: "${fname}"`,true); return; }
-  pmBC.push({ label:found.name, type, source:foundSrc, fileKey:found.key });
+  if (!found) { showToast(`❌ ไม่พบ Policy${type}: "${fname}"`, true); return; }
+  pmBC.push({ label: found.name, type, source: foundSrc, fileKey: found.key });
   pmRender(type, found, foundSrc);
 }
 
 /* ── Breadcrumb ── */
 function pmRenderBC() {
   const el = document.getElementById('pmBreadcrumb');
-  el.innerHTML = pmBC.map((item,i) => {
-    const sep = i>0 ? `<span class="bc-sep">›</span>` : '';
-    if (i===pmBC.length-1) return sep+`<span class="bc-cur">${esc(item.label)}</span>`;
-    return sep+`<span class="bc-link" onclick="pmBcNav(${i})">${esc(item.label)}</span>`;
+  el.innerHTML = pmBC.map((item, i) => {
+    const sep = i > 0 ? `<span class="bc-sep">›</span>` : '';
+    if (i === pmBC.length - 1) return sep + `<span class="bc-cur">${esc(item.label)}</span>`;
+    return sep + `<span class="bc-link" onclick="pmBcNav(${i})">${esc(item.label)}</span>`;
   }).join('');
 }
 function pmBcNav(idx) {
-  pmBC.splice(idx+1);
+  pmBC.splice(idx + 1);
   const item = pmBC[idx];
-  const fo = pmFolders[item.source][item.fileKey];
-  if (fo) pmRender(item.type, {...fo, key:item.fileKey}, item.source);
+  const fo   = pmFolders[item.source][item.fileKey];
+  if (fo) pmRender(item.type, { ...fo, key: item.fileKey }, item.source);
 }
 
 /* ── JSON renderer ── */
 function pmRenderJson(val, resolver, indent=0, ownerKey=null) {
   const p = '  '.repeat(indent), p1 = '  '.repeat(indent+1);
-  if (val===null) return `<span class="j-null">null</span>`;
-  if (typeof val==='boolean') return `<span class="j-bool">${val}</span>`;
-  if (typeof val==='number')  return `<span class="j-num">${val}</span>`;
-  if (typeof val==='string') {
-    const c=resolver(ownerKey,val,ownerKey); if(c) return `"${c}"`;
+  if (val === null)           return `<span class="j-null">null</span>`;
+  if (typeof val === 'boolean') return `<span class="j-bool">${val}</span>`;
+  if (typeof val === 'number')  return `<span class="j-num">${val}</span>`;
+  if (typeof val === 'string') {
+    const c = resolver(ownerKey, val, ownerKey); if (c) return `"${c}"`;
     return `<span class="j-str">"${esc(val)}"</span>`;
   }
   if (Array.isArray(val)) {
-    if(!val.length) return `<span class="j-pun">[]</span>`;
-    const items=val.map(i=>`${p1}${pmRenderJson(i,resolver,indent+1,ownerKey)}`).join(`<span class="j-pun">,</span>\n`);
+    if (!val.length) return `<span class="j-pun">[]</span>`;
+    const items = val.map(i => `${p1}${pmRenderJson(i, resolver, indent+1, ownerKey)}`).join(`<span class="j-pun">,</span>\n`);
     return `<span class="j-pun">[</span>\n${items}\n${p}<span class="j-pun">]</span>`;
   }
-  if (typeof val==='object') {
-    const keys=Object.keys(val);
-    if(!keys.length) return `<span class="j-pun">{}</span>`;
-    const items=keys.map(k=>{
-      const vh=pmRenderJsonVal(k,val[k],resolver,indent+1,ownerKey);
+  if (typeof val === 'object') {
+    const keys = Object.keys(val);
+    if (!keys.length) return `<span class="j-pun">{}</span>`;
+    const items = keys.map(k => {
+      const vh = pmRenderJsonVal(k, val[k], resolver, indent+1, ownerKey);
       return `${p1}<span class="j-key">"${esc(k)}"</span><span class="j-pun">: </span>${vh}`;
     }).join(`<span class="j-pun">,</span>\n`);
     return `<span class="j-pun">{</span>\n${items}\n${p}<span class="j-pun">}</span>`;
@@ -384,24 +706,24 @@ function pmRenderJson(val, resolver, indent=0, ownerKey=null) {
 }
 
 function pmRenderJsonVal(curKey, val, resolver, indent, parentKey) {
-  const p='  '.repeat(indent), p1='  '.repeat(indent+1);
-  if (val===null) return `<span class="j-null">null</span>`;
-  if (typeof val==='boolean') return `<span class="j-bool">${val}</span>`;
-  if (typeof val==='number')  return `<span class="j-num">${val}</span>`;
-  if (typeof val==='string') {
-    const c=resolver(curKey,val,parentKey); if(c) return `"${c}"`;
+  const p = '  '.repeat(indent), p1 = '  '.repeat(indent+1);
+  if (val === null)           return `<span class="j-null">null</span>`;
+  if (typeof val === 'boolean') return `<span class="j-bool">${val}</span>`;
+  if (typeof val === 'number')  return `<span class="j-num">${val}</span>`;
+  if (typeof val === 'string') {
+    const c = resolver(curKey, val, parentKey); if (c) return `"${c}"`;
     return `<span class="j-str">"${esc(val)}"</span>`;
   }
   if (Array.isArray(val)) {
-    if(!val.length) return `<span class="j-pun">[]</span>`;
-    const items=val.map(i=>`${p1}${pmRenderJsonVal(curKey,i,resolver,indent+1,parentKey)}`).join(`<span class="j-pun">,</span>\n`);
+    if (!val.length) return `<span class="j-pun">[]</span>`;
+    const items = val.map(i => `${p1}${pmRenderJsonVal(curKey, i, resolver, indent+1, parentKey)}`).join(`<span class="j-pun">,</span>\n`);
     return `<span class="j-pun">[</span>\n${items}\n${p}<span class="j-pun">]</span>`;
   }
-  if (typeof val==='object') {
-    const keys=Object.keys(val);
-    if(!keys.length) return `<span class="j-pun">{}</span>`;
-    const items=keys.map(k=>{
-      const vh=pmRenderJsonVal(k,val[k],resolver,indent+1,curKey);
+  if (typeof val === 'object') {
+    const keys = Object.keys(val);
+    if (!keys.length) return `<span class="j-pun">{}</span>`;
+    const items = keys.map(k => {
+      const vh = pmRenderJsonVal(k, val[k], resolver, indent+1, curKey);
       return `${p1}<span class="j-key">"${esc(k)}"</span><span class="j-pun">: </span>${vh}`;
     }).join(`<span class="j-pun">,</span>\n`);
     return `<span class="j-pun">{</span>\n${items}\n${p}<span class="j-pun">}</span>`;
@@ -410,30 +732,33 @@ function pmRenderJsonVal(curKey, val, resolver, indent, parentKey) {
 }
 
 /* ── Collect helpers ── */
-function pmCollect(obj,field,res=[]){
-  if(typeof obj!=='object'||obj===null)return res;
-  if(Array.isArray(obj)){obj.forEach(i=>pmCollect(i,field,res));return res;}
-  Object.keys(obj).forEach(k=>{if(k===field)res.push(obj[k]);else pmCollect(obj[k],field,res);});
+function pmCollect(obj, field, res=[]) {
+  if (typeof obj !== 'object' || obj === null) return res;
+  if (Array.isArray(obj)) { obj.forEach(i => pmCollect(i, field, res)); return res; }
+  Object.keys(obj).forEach(k => {
+    if (k === field) res.push(obj[k]);
+    else pmCollect(obj[k], field, res);
+  });
   return res;
 }
-function pmCollectIn(obj,pk,ck,inPk=false,res=[]){
-  if(typeof obj!=='object'||obj===null)return res;
-  if(Array.isArray(obj)){obj.forEach(i=>pmCollectIn(i,pk,ck,inPk,res));return res;}
-  Object.keys(obj).forEach(k=>{
-    const now=k===pk?true:inPk;
-    if(now&&k===ck)res.push(obj[k]);
-    pmCollectIn(obj[k],pk,ck,now,res);
+function pmCollectIn(obj, pk, ck, inPk=false, res=[]) {
+  if (typeof obj !== 'object' || obj === null) return res;
+  if (Array.isArray(obj)) { obj.forEach(i => pmCollectIn(i, pk, ck, inPk, res)); return res; }
+  Object.keys(obj).forEach(k => {
+    const now = k === pk ? true : inPk;
+    if (now && k === ck) res.push(obj[k]);
+    pmCollectIn(obj[k], pk, ck, now, res);
   });
   return res;
 }
 
 /* ── Utils ── */
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function escA(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
-function showToast(msg,isErr=false){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.className='toast'+(isErr?' err':'');
-  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escA(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast' + (isErr ? ' err' : '');
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500);
 }
 </script>
 </body>

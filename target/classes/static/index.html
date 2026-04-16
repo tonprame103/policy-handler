@@ -178,9 +178,9 @@ function clearAll() {
 function loadSample() {
   $in.value = JSON.stringify({
     application: 'JSON Tool', version: '1.0.0',
-    runtime: { springBoot: '4.0.5', java: '25', virtualThreads: true },
-    features: ['validate', 'format', 'minify', 'read files'],
-    timestamp: new Date().toISOString()
+    features: ['validation', 'formatting', 'file browsing'],
+    settings: { enableHistory: true, theme: 'dark', retryLimit: 3 },
+    tags: ['spring-boot', 'html5', 'api']
   }, null, 2);
   $cc.textContent = $in.value.length.toLocaleString() + ' chars';
   setBadge($ib, 'neu', 'sample loaded');

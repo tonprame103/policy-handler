@@ -16,8 +16,8 @@
   border: 1px solid var(--border2); background: transparent;
   color: var(--muted); cursor: pointer; transition: all 0.12s;
 }
-.src-tab.active { border-color: var(--amber); color: var(--amber); background: rgba(232,160,32,0.06); }
-.src-tab:not(.active):hover { color: var(--text); border-color: var(--dim); }
+.src-tab.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+.src-tab:not(.active):hover { color: var(--text2); border-color: var(--border2); }
 
 /* Summary row */
 .summary-row {
@@ -50,7 +50,7 @@
   border: 1px solid var(--border2); background: transparent;
   color: var(--muted); cursor: pointer; transition: all 0.12s;
 }
-.tab-btn.active { border-color: var(--amber); color: var(--amber); }
+.tab-btn.active { border-color: var(--accent); color: var(--accent); }
 .tab-btn:not(.active):hover { color: var(--text); }
 
 /* File meta */
@@ -71,15 +71,17 @@
   display: none; width: 100%; min-height: 360px;
   background: var(--bg); border: none;
   border-top: 1px solid var(--border); outline: none;
-  color: var(--text); font-family: var(--mono); font-size: 12px;
-  line-height: 1.7; padding: 14px 16px; resize: vertical;
+  color: var(--text); font-family: var(--mono); font-size: 12.5px;
+  line-height: 1.8; padding: 16px 18px; resize: vertical;
 }
+/* show textarea when wrapper is open */
+.edit-wrap.open > .edit-area { display: block; }
 
 /* Error context */
 .err-context {
-  background: var(--bg2); border: 1px solid rgba(232,64,64,0.3);
+  background: var(--bg2); border: 1px solid rgba(192,57,43,0.2);
   border-radius: var(--r); padding: 8px 12px;
-  font-family: var(--mono); font-size: 11px; color: var(--text);
+  font-family: var(--mono); font-size: 11px; color: var(--text2);
   overflow-x: auto; white-space: pre; margin-top: 8px;
 }
 
@@ -96,6 +98,35 @@
 }
 .inv-color { color: var(--red); }
 .ok-color  { color: var(--green); }
+
+/* ── Error-line overlay ── */
+.edit-wrap {
+  position: relative;
+  display: none; /* toggled by enterEdit/cancelEdit */
+}
+.edit-wrap.open { display: block; }
+#errLineOverlay {
+  display: none;
+  position: absolute;
+  left: 0; right: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: rgba(192, 57, 43, 0.09);
+  border-left: 3px solid var(--red);
+  box-sizing: border-box;
+}
+#errLineOverlay.flash {
+  animation: err-flash 0.55s ease-out forwards;
+}
+@keyframes err-flash {
+  0%   { background: rgba(192, 57, 43, 0.28); }
+  100% { background: rgba(192, 57, 43, 0.09); }
+}
+/* error state on the textarea itself */
+#editArea.err-state {
+  border-top: 1px solid rgba(192, 57, 43, 0.35);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.35);
+}
 </style>
 </head>
 <body>
@@ -144,7 +175,7 @@
       <div id="serverRow" style="display:flex;align-items:center;gap:8px;">
         <div style="flex:1;display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:7px 12px;font-family:var(--mono);font-size:11px;">
           <span>📂</span>
-          <span id="serverPath" style="color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">Loading…</span>
+          <span id="serverPath" style="color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">Loading…</span>
         </div>
         <button class="btn btn-primary" onclick="loadServer()">↻ Refresh</button>
       </div>
@@ -170,10 +201,10 @@
     <!-- Summary + filter -->
     <div id="summaryRow" style="display:none;" class="summary-row">
       <div class="stat-chip"><span class="val" id="statTotal">0</span><span class="lbl">ไฟล์</span></div>
-      <div class="stat-chip" style="border-color:rgba(32,192,112,0.25)">
+      <div class="stat-chip" style="border-color:rgba(45,125,82,0.25)">
         <span class="val" style="color:var(--green)" id="statValid">0</span><span class="lbl">Valid</span>
       </div>
-      <div class="stat-chip" style="border-color:rgba(232,64,64,0.25)">
+      <div class="stat-chip" style="border-color:rgba(192,57,43,0.2)">
         <span class="val" style="color:var(--red)" id="statInvalid">0</span><span class="lbl">Invalid</span>
       </div>
       <div style="flex:1"></div>
@@ -211,8 +242,13 @@
       </div>
       <div id="detailNotice" style="padding:10px 14px 0;"></div>
       <div class="result-box" id="detailBox" style="flex:1;"></div>
-      <textarea class="edit-area" id="editArea" spellcheck="false"
-        oninput="onEditInput()" placeholder="แก้ไข JSON ที่นี่…"></textarea>
+      <div class="edit-wrap" id="editWrap">
+        <div id="errLineOverlay"></div>
+        <textarea class="edit-area" id="editArea" spellcheck="false"
+          oninput="onEditInput()"
+          onscroll="syncOverlay()"
+          placeholder="แก้ไข JSON ที่นี่…"></textarea>
+      </div>
       <div class="statusbar">
         <span id="detailInfo" style="font-family:var(--mono);font-size:10px;color:var(--muted);"></span>
         <span id="editStatus" style="font-family:var(--mono);font-size:10px;display:none;"></span>
@@ -443,7 +479,8 @@ function resetDetailUI(f) {
   ['editBtn','cancelBtn','validateEditBtn','saveBtn','copyBtn'].forEach(id=>
     document.getElementById(id).style.display='none');
   document.getElementById('detailBox').style.display='';
-  document.getElementById('editArea').style.display='none';
+  document.getElementById('editWrap').classList.remove('open');
+  clearErrOverlay();
   document.getElementById('editStatus').style.display='none';
   document.getElementById('editCharCount').style.display='none';
   document.getElementById('detailNotice').innerHTML='';
@@ -492,6 +529,11 @@ function closeDetail(silent=false) {
   document.getElementById('detailView').style.display='none';
   document.getElementById('detailView').classList.remove('open');
   document.getElementById('listView').style.display='flex';
+  
+  if (!silent) {
+    renderSummary();
+    renderList();
+  }
 }
 
 /* ── Edit mode ── */
@@ -499,8 +541,9 @@ function enterEdit() {
   fvEditMode=true; fvEditValid=false;
   const ta=document.getElementById('editArea');
   ta.value=fvCurrentFile.formatted||fvCurrentFile.content||'';
+  clearErrOverlay();
   document.getElementById('detailBox').style.display='none';
-  ta.style.display='block';
+  document.getElementById('editWrap').classList.add('open');
   document.getElementById('editBtn').style.display=document.getElementById('copyBtn').style.display='none';
   document.getElementById('cancelBtn').style.display=document.getElementById('validateEditBtn').style.display='inline-flex';
   document.getElementById('saveBtn').style.display='none';
@@ -510,7 +553,8 @@ function enterEdit() {
 
 function cancelEdit() {
   fvEditMode=false; fvEditValid=false;
-  document.getElementById('editArea').style.display='none';
+  clearErrOverlay();
+  document.getElementById('editWrap').classList.remove('open');
   document.getElementById('detailBox').style.display='';
   ['cancelBtn','validateEditBtn','saveBtn'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('editStatus').style.display=document.getElementById('editCharCount').style.display='none';
@@ -521,6 +565,7 @@ function cancelEdit() {
 
 function onEditInput() {
   updateCharCount(document.getElementById('editArea').value);
+  clearErrOverlay();
   if (fvEditValid) { fvEditValid=false; document.getElementById('saveBtn').style.display='none'; updateEditStatus('idle'); }
 }
 
@@ -534,32 +579,113 @@ function updateEditStatus(state,msg) {
   else { el.style.color='var(--red)'; el.textContent='✗ '+(msg||'invalid JSON'); }
 }
 
-function validateEdit() {
-  const raw=document.getElementById('editArea').value;
-  const nb=document.getElementById('detailNotice');
+async function validateEdit() {
+  const json = document.getElementById('editArea').value;
+  const nb = document.getElementById('detailNotice');
   try {
-    const pretty=JSON.stringify(JSON.parse(raw),null,2);
-    document.getElementById('editArea').value=pretty;
-    updateCharCount(pretty);
-    fvEditValid=true; fvCopyCache=pretty;
-    document.getElementById('saveBtn').style.display='inline-flex';
-    updateEditStatus('ok');
-    nb.innerHTML=`<div class="alert alert-ok">✅ JSON ถูกต้อง — กด 💾 Save เพื่อดาวน์โหลด</div>`;
+    const res = await fetch(API + '/validate', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ json })
+    });
+    const data = await res.json();
+    if (data.valid) {
+      document.getElementById('editArea').value = data.formattedJson;
+      updateCharCount(data.formattedJson);
+      fvEditValid=true; fvCopyCache=data.formattedJson;
+      clearErrOverlay();
+      document.getElementById('saveBtn').style.display='inline-flex';
+      updateEditStatus('ok');
+      nb.innerHTML=`<div class="alert alert-ok">✅ JSON ถูกต้อง — กด 💾 Save เพื่อดาวน์โหลด</div>`;
+    } else {
+      fvEditValid=false; document.getElementById('saveBtn').style.display='none';
+      updateEditStatus('err', data.message);
+      
+      let highlightLineNum = 0;
+      if (data.errorDetail) {
+         const lm = data.errorDetail.match(/Line (\d+)/i);
+         if (lm) highlightLineNum = parseInt(lm[1]);
+      }
+      
+      nb.innerHTML=`<div class="alert alert-err">❌ ${esc(data.message)}${data.errorDetail?' — '+esc(data.errorDetail):''}</div>`;
+      if (highlightLineNum) highlightLine(highlightLineNum);
+    }
   } catch(ex) {
     fvEditValid=false; document.getElementById('saveBtn').style.display='none';
-    const ed=parseJSONError(ex.message,raw);
-    updateEditStatus('err',ex.message);
-    nb.innerHTML=`<div class="alert alert-err">❌ ${esc(ex.message)}${ed?` — Line ${ed.line}, Col ${ed.col}`:''}${ed?.context?`<pre class="err-context" style="margin-top:8px;">${esc(ed.context)}</pre>`:''}</div>`;
-    if(ed) highlightLine(ed.line);
+    updateEditStatus('err', ex.message);
+    nb.innerHTML=`<div class="alert alert-err">❌ Cannot connect to server</div>`;
   }
 }
 
+/* ── Current highlighted error line (1-indexed, 0 = none) ── */
+let _errLine = 0;
+
 function highlightLine(lineNum) {
-  const ta=document.getElementById('editArea');
-  const lines=ta.value.split('\n');
-  let pos=0;
-  for(let i=0;i<Math.min(lineNum-1,lines.length);i++) pos+=lines[i].length+1;
-  ta.focus(); ta.setSelectionRange(pos,pos+(lines[lineNum-1]||'').length);
+  _errLine = lineNum;
+  const ta    = document.getElementById('editArea');
+  const lines = ta.value.split('\n');
+
+  /* Calculate character range of the error line */
+  let pos = 0;
+  for (let i = 0; i < Math.min(lineNum - 1, lines.length); i++) pos += lines[i].length + 1;
+  const lineEnd = pos + (lines[lineNum - 1] || '').length;
+
+  /* Step 1 — Focus without letting browser auto-scroll */
+  ta.focus({ preventScroll: true });
+
+  /* Step 2 — Select the error line
+     (browser may auto-scroll here; we override it right after) */
+  ta.setSelectionRange(pos, lineEnd);
+
+  /* Step 3 — Override scrollTop to put the error line ~1/3 from top.
+     Must come AFTER setSelectionRange so our scroll wins. */
+  scrollEditAreaToLine(ta, lineNum);
+
+  /* Step 4 — Visual state */
+  ta.classList.add('err-state');
+
+  /* Step 5 — Position overlay in next frame after browser has
+     committed our scrollTop. Single rAF is enough since we no
+     longer call focus/setSelectionRange inside the callback. */
+  requestAnimationFrame(() => positionOverlay(ta, lineNum));
+}
+
+function scrollEditAreaToLine(ta, lineNum) {
+  const cs     = getComputedStyle(ta);
+  const lineH  = parseFloat(cs.lineHeight) || (parseFloat(cs.fontSize) * 1.8);
+  const padTop = parseFloat(cs.paddingTop) || 16;
+  const target = padTop + (lineNum - 1) * lineH - ta.clientHeight / 3;
+  ta.scrollTop = Math.max(0, target);
+}
+
+function positionOverlay(ta, lineNum) {
+  const ov     = document.getElementById('errLineOverlay');
+  const cs     = getComputedStyle(ta);
+  const lineH  = parseFloat(cs.lineHeight) || (parseFloat(cs.fontSize) * 1.8);
+  const padTop = parseFloat(cs.paddingTop) || 16;
+  /* top relative to the edit-wrap wrapper */
+  const top   = padTop + (lineNum - 1) * lineH - ta.scrollTop;
+  ov.style.top    = top + 'px';
+  ov.style.height = lineH + 'px';
+  ov.style.display = 'block';
+  /* re-trigger flash animation */
+  ov.classList.remove('flash');
+  void ov.offsetWidth; /* reflow */
+  ov.classList.add('flash');
+}
+
+/* called by textarea onscroll */
+function syncOverlay() {
+  if (!_errLine) return;
+  const ta = document.getElementById('editArea');
+  positionOverlay(ta, _errLine);
+}
+
+function clearErrOverlay() {
+  _errLine = 0;
+  const ov = document.getElementById('errLineOverlay');
+  if (ov) { ov.style.display = 'none'; ov.classList.remove('flash'); }
+  const ta = document.getElementById('editArea');
+  if (ta) ta.classList.remove('err-state');
 }
 
 function saveFile() {
@@ -570,16 +696,17 @@ function saveFile() {
   });
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 
-  if(fvCurrentFile?.source==='local'){
-    Object.assign(fvCurrentFile,{formatted:fvCopyCache,content:fvCopyCache,valid:true,error:null,errorDetail:null});
-    const idx=fvAllFiles.findIndex(x=>x.relPath===fvCurrentFile.relPath);
-    if(idx!==-1) fvAllFiles[idx]={...fvCurrentFile};
+  if (fvCurrentFile) {
+    Object.assign(fvCurrentFile, { formatted: fvCopyCache, content: fvCopyCache, valid: true, error: null, errorDetail: null });
+    const idx = fvAllFiles.findIndex(x => x.relPath === fvCurrentFile.relPath);
+    if (idx !== -1) fvAllFiles[idx] = { ...fvCurrentFile };
     renderSummary();
   }
   showToast(`✓ Saved "${fname}"`);
 
   fvEditMode=false;fvEditValid=false;
-  document.getElementById('editArea').style.display='none';
+  clearErrOverlay();
+  document.getElementById('editWrap').classList.remove('open');
   document.getElementById('detailBox').style.display='';
   ['cancelBtn','validateEditBtn','saveBtn'].forEach(id=>document.getElementById(id).style.display='none');
   document.getElementById('editStatus').style.display=document.getElementById('editCharCount').style.display='none';
