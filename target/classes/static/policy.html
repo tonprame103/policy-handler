@@ -183,6 +183,10 @@
       <span class="nav-icon">🛡</span>
       <span>Policy Management</span>
     </a>
+    <a class="nav-link" href="evaluate.html">
+      <span class="nav-icon">🎯</span>
+      <span>Evaluate JSON Path</span>
+    </a>
   </nav>
   <div class="nav-right">
     <span class="badge-pill badge-blue">Spring Boot 4.0.5</span>
@@ -259,7 +263,10 @@
 
     <!-- JSON pane -->
     <div class="view-pane" id="pane-json">
-      <div class="json-viewer" id="pmJsonViewer"></div>
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 8px;">
+        <button class="btn" style="padding: 4px 10px; font-size: 11px;" onclick="pmCopyJson()">📋 Copy JSON</button>
+      </div>
+      <div class="json-viewer" id="pmJsonViewer" style="margin-top: 4px;"></div>
     </div>
   </div>
 
@@ -273,6 +280,7 @@
 const pmFolders = { common: {}, activity: {} };
 const pmReady   = { common: false, activity: false };
 const pmBC      = [];   // { label, type, source, fileKey }
+let pmCurrentJsonContent = '';
 
 /* ─────────────────────────────────────────────
    TYPE DETECTION from search input prefix
@@ -468,6 +476,11 @@ function pmClear() {
   pmBC.length = 0;
 }
 
+function pmCopyJson() {
+  if (!pmCurrentJsonContent) return;
+  navigator.clipboard.writeText(pmCurrentJsonContent).then(() => showToast('✓ Copied JSON Content'));
+}
+
 /* ─────────────────────────────────────────────
    TAB SWITCH
 ───────────────────────────────────────────── */
@@ -481,6 +494,7 @@ function switchTab(name) {
    RENDER VIEWER
 ───────────────────────────────────────────── */
 function pmRender(type, fileObj, src) {
+  pmCurrentJsonContent = fileObj.parsed ? JSON.stringify(fileObj.parsed, null, 2) : (fileObj.content || '');
   const viewer = document.getElementById('pmViewer');
   viewer.style.display = 'flex'; viewer.classList.add('open');
 

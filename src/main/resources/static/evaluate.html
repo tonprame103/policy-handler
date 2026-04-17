@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JSON Tool — Validate</title>
+<title>JSON Tool — Evaluate</title>
 <link rel="stylesheet" href="shared.css">
 <style>
 .split { display: flex; gap: 14px; height: calc(100vh - 52px - 40px); }
@@ -25,7 +25,46 @@
 
 .result-box { flex: 1; overflow: auto; }
 textarea.code-input { flex: 1; }
+
+.path-input-row {
+  display: flex; gap: 8px; align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.path-label {
+  font-family: var(--sans); font-size: 12px; font-weight: 600; color: var(--text);
+  white-space: nowrap;
+}
+.path-input-row input {
+  flex: 1;
+  background: var(--bg); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 6px 12px;
+  color: var(--text); font-family: var(--mono); font-size: 12px;
+  outline: none; transition: border 0.12s;
+}
+.path-input-row input:focus { border-color: var(--amber); }
+.path-input-row input::placeholder { color: var(--muted); }
+
+.list-item-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+.eval-item {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+}
+.eval-item:last-child {
+    border-bottom: none;
+}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/jsonpath@1.1.1/jsonpath.min.js"></script>
 </head>
 <body>
 
@@ -36,7 +75,7 @@ textarea.code-input { flex: 1; }
     <div class="topbar-title">JSON<span>Tool</span></div>
   </a>
   <nav class="nav-links">
-    <a class="nav-link active" href="index.html">
+    <a class="nav-link" href="index.html">
       <span class="nav-icon">✓</span>
       <span>Validate Json Input</span>
     </a>
@@ -48,7 +87,7 @@ textarea.code-input { flex: 1; }
       <span class="nav-icon">🛡</span>
       <span>Policy Management</span>
     </a>
-    <a class="nav-link" href="evaluate.html">
+    <a class="nav-link active" href="evaluate.html">
       <span class="nav-icon">🎯</span>
       <span>Evaluate JSON Path</span>
     </a>
@@ -56,7 +95,7 @@ textarea.code-input { flex: 1; }
   <div class="nav-right">
     <span class="badge-pill badge-blue">Spring Boot 4.0.5</span>
     <span class="badge-pill badge-amber">Java 25</span>
-    <span class="badge-pill badge-green"><span class="pulse-dot"></span> running</span>
+    <span class="badge-pill badge-green"><span class="pulse-dot"></span> frontend only</span>
   </div>
 </div>
 
@@ -69,16 +108,22 @@ textarea.code-input { flex: 1; }
       <div class="panel">
         <div class="panel-head">
           <div class="panel-label">
-            <span style="color:var(--amber)">▶</span> input.json
+            <span style="color:var(--amber)">▶</span> input
           </div>
           <div class="panel-actions">
             <button class="btn" onclick="loadSample()">Sample</button>
             <button class="btn btn-danger btn-ghost" onclick="clearAll()">Clear</button>
-            <button class="btn btn-primary" onclick="doValidate()">Validate ↵</button>
+            <button class="btn btn-primary" onclick="doEvaluate()">Evaluate ↵</button>
           </div>
         </div>
+        
+        <div class="path-input-row">
+            <div class="path-label">JSON Path</div>
+            <input type="text" id="jsonPathInput" placeholder="e.g. $.store.book[*].author" onkeydown="if(event.key==='Enter') doEvaluate()">
+        </div>
+
         <textarea class="code-input" id="jsonInput"
-          placeholder="Paste JSON here…&#10;&#10;Ctrl+Enter to validate"></textarea>
+          placeholder="Paste JSON here…&#10;&#10;Ctrl+Enter to evaluate"></textarea>
         <div class="statusbar">
           <span id="inputBadge" class="badge badge-neu">idle</span>
           <span id="charCount" class="char-counter">0 chars</span>
@@ -94,15 +139,15 @@ textarea.code-input { flex: 1; }
             <span style="color:var(--cyan)">◈</span> output
           </div>
           <div class="panel-actions">
-            <button class="btn" id="copyBtn" style="display:none" onclick="doCopy()">Copy</button>
-            <button class="btn" id="minifyBtn" style="display:none" onclick="doMinify()">Minify</button>
+            <span id="matchCount" style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-right:10px;"></span>
+            <button class="btn" id="copyBtn" style="display:none" onclick="doCopy()">Copy Selected</button>
           </div>
         </div>
         <div id="outputArea" class="result-box">
           <div class="result-placeholder">
-            <div class="icon">{ }</div>
-            <div>Formatted JSON appears here</div>
-            <div style="color:var(--border2);font-size:10px;margin-top:4px;">paste JSON → Validate</div>
+            <div class="icon">🎯</div>
+            <div>Evaluation results appear here</div>
+            <div style="color:var(--border2);font-size:10px;margin-top:4px;">input path + JSON → Evaluate</div>
           </div>
         </div>
         <div class="statusbar">
@@ -118,16 +163,16 @@ textarea.code-input { flex: 1; }
 <div class="toast" id="toast"></div>
 
 <script>
-const API = '/api';
 const $in   = document.getElementById('jsonInput');
+const $path = document.getElementById('jsonPathInput');
 const $out  = document.getElementById('outputArea');
 const $rb   = document.getElementById('resultBadge');
 const $ib   = document.getElementById('inputBadge');
 const $cc   = document.getElementById('charCount');
 const $lc   = document.getElementById('lineCount');
+const $mc   = document.getElementById('matchCount');
 const $cpb  = document.getElementById('copyBtn');
-const $mnb  = document.getElementById('minifyBtn');
-let lastFormatted = '', isMinified = false;
+let lastFormatted = '';
 
 $in.addEventListener('input', () => {
   const n = $in.value.length;
@@ -135,75 +180,97 @@ $in.addEventListener('input', () => {
   if (n === 0) setBadge($ib, 'neu', 'idle');
 });
 $in.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') doValidate();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') doEvaluate();
 });
 
-async function doValidate() {
-  const json = $in.value.trim();
-  if (!json) { showToast('⚠ paste JSON first', true); return; }
+function doEvaluate() {
+  const jsonStr = $in.value.trim();
+  const pathStr = $path.value.trim();
+  
+  if (!jsonStr) { showToast('⚠ paste JSON first', true); return; }
+  if (!pathStr) { showToast('⚠ enter JSON path', true); $path.focus(); return; }
+  
   setBadge($ib, 'neu', '');
   $ib.innerHTML = '<span class="spinner"></span>';
-  $out.innerHTML = '<div class="empty-state"><div class="spinner"></div></div>';
-  try {
-    const res  = await fetch(API + '/validate', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ json })
-    });
-    const data = await res.json();
-    if (data.valid) {
-      lastFormatted = data.formattedJson; isMinified = false;
-      $out.innerHTML = syntaxHL(data.formattedJson);
-      setBadge($ib, 'ok', '✓ valid');
-      setBadge($rb, 'ok', '✓ Valid JSON');
-      $lc.textContent = data.lineCount + ' lines';
-      $cpb.style.display = $mnb.style.display = 'inline-flex';
-      $mnb.textContent = 'Minify';
-    } else {
-      $out.innerHTML = errBox(data.message, data.errorDetail);
-      setBadge($ib, 'err', '✗ invalid');
-      setBadge($rb, 'err', '✗ Invalid JSON');
-      $lc.textContent = '';
-      $cpb.style.display = $mnb.style.display = 'none';
-    }
-  } catch (e) {
-    $out.innerHTML = errBox('Cannot connect to server', e.message);
-    setBadge($ib, 'err', '✗ error'); setBadge($rb, 'err', '✗ error');
-  }
+  
+  setTimeout(() => {
+      try {
+          // Parse JSON
+          let obj;
+          try {
+              obj = JSON.parse(jsonStr);
+              setBadge($ib, 'ok', '✓ parsed');
+          } catch(e) {
+              $out.innerHTML = errBox('Invalid JSON Input', e.message);
+              setBadge($ib, 'err', '✗ invalid json');
+              setBadge($rb, 'err', '✗ error');
+              $mc.textContent = '';
+              $cpb.style.display = 'none';
+              return;
+          }
+          
+          // Evaluate Path
+          const results = jsonpath.query(obj, pathStr);
+          
+          if (!results || results.length === 0) {
+              $out.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12px;">No matches found</div>';
+              setBadge($rb, 'neu', '0 matches');
+              $mc.textContent = '';
+              $cpb.style.display = 'none';
+              lastFormatted = '[]';
+              return;
+          }
+          
+          // Format Output
+          const outputValue = results.length === 1 ? results[0] : results;
+          lastFormatted = JSON.stringify(outputValue, null, 2);
+          
+          $out.innerHTML = `<div style="padding:14px;">${syntaxHL(lastFormatted)}</div>`;
+          setBadge($rb, 'ok', '✓ Evaluated');
+          $mc.textContent = `${results.length} match${results.length>1?'es':''}`;
+          $lc.textContent = lastFormatted.split('\n').length + ' lines';
+          $cpb.style.display = 'inline-flex';
+          
+      } catch (e) {
+          $out.innerHTML = errBox('Evaluation Error', e.message);
+          setBadge($rb, 'err', '✗ invalid path');
+          $mc.textContent = '';
+          $cpb.style.display = 'none';
+      }
+  }, 50);
 }
 
 function clearAll() {
-  $in.value = ''; lastFormatted = ''; isMinified = false;
-  $cc.textContent = '0 chars'; $lc.textContent = '';
-  $out.innerHTML = `<div class="result-placeholder"><div class="icon">{ }</div><div>Formatted JSON appears here</div></div>`;
+  $in.value = ''; $path.value = ''; lastFormatted = '';
+  $cc.textContent = '0 chars'; $lc.textContent = ''; $mc.textContent = '';
+  $out.innerHTML = `<div class="result-placeholder"><div class="icon">🎯</div><div>Evaluation results appear here</div></div>`;
   setBadge($ib, 'neu', 'idle'); setBadge($rb, 'neu', 'awaiting input');
-  $cpb.style.display = $mnb.style.display = 'none';
+  $cpb.style.display = 'none';
 }
 
 function loadSample() {
   $in.value = JSON.stringify({
-    application: 'JSON Tool', version: '1.0.0',
-    runtime: { springBoot: '4.0.5', java: '25', virtualThreads: true },
-    features: ['validate', 'format', 'minify', 'read files'],
-    timestamp: new Date().toISOString()
+    "store": {
+      "book": [
+        { "category": "reference", "author": "Nigel Rees", "title": "Sayings of the Century", "price": 8.95 },
+        { "category": "fiction", "author": "Evelyn Waugh", "title": "Sword of Honour", "price": 12.99 },
+        { "category": "fiction", "author": "Herman Melville", "title": "Moby Dick", "isbn": "0-553-21311-3", "price": 8.99 },
+        { "category": "fiction", "author": "J. R. R. Tolkien", "title": "The Lord of the Rings", "isbn": "0-395-19395-8", "price": 22.99 }
+      ],
+      "bicycle": {
+        "color": "red",
+        "price": 19.95
+      }
+    }
   }, null, 2);
+  $path.value = '$.store.book[*].author';
   $cc.textContent = $in.value.length.toLocaleString() + ' chars';
   setBadge($ib, 'neu', 'sample loaded');
 }
 
 function doCopy() {
   if (!lastFormatted) return;
-  navigator.clipboard.writeText(lastFormatted).then(() => showToast('✓ Copied'));
-}
-
-function doMinify() {
-  if (!lastFormatted) return;
-  if (!isMinified) {
-    $out.textContent = JSON.stringify(JSON.parse(lastFormatted));
-    $mnb.textContent = 'Format'; isMinified = true;
-  } else {
-    $out.innerHTML = syntaxHL(lastFormatted);
-    $mnb.textContent = 'Minify'; isMinified = false;
-  }
+  navigator.clipboard.writeText(lastFormatted).then(() => showToast('✓ Copied JSON Array'));
 }
 
 function setBadge(el, type, text) {
